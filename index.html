@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motoros események – Magyarország</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <header class="motoros-fejlec">
+        <div class="fejlec-bal">
+            <div class="fejlec-ikon">🏍️</div>
+            <div>
+                <h1 class="fejlec-cim">Motoros események</h1>
+                <p class="fejlec-alcim">Indulás: <b id="fejlec-indulas">Dunakeszi</b> • Magyarország 348 városa, látnivalói és közelgő motoros találkozói</p>
+            </div>
+        </div>
+        <button type="button" class="legkozelebbi-gomb" onclick="valasztLegkozelebbiTalalkozo()">
+            🔥 A következő motoros program
+        </button>
+    </header>
+
+    <div class="fo-elrendezes">
+        
+        <!-- BAL OLDAL: Részletes útvonal -->
+        <aside class="oldalsav">
+            <div class="oldalsav-fejlec">
+                <h2>🧭 Részletes útvonal</h2>
+            </div>
+            <div class="utvonal-osszegzo" id="utvonal-osszegzo"></div>
+            <button type="button" class="vissza-utvonal-gomb bal-gomb" id="btn-vissza-utvonal-bal" onclick="visszaTeljesUtvonalra()">
+                🗺️ Teljes útvonal mutatása
+            </button>
+            <div class="lepes-lista" id="utvonal-lista">
+                <p class="ures-allapot">Válassz egy kiindulópontot és egy úti célt, vagy kattints a <b>A következő motoros program</b> gombra.</p>
+            </div>
+        </aside>
+
+        <!-- KÖZÉP: Kiindulópont + Úti cél + Motoros események választók és Térkép -->
+        <main class="kozep-oszlop">
+            <div class="utvonal-valaszto-panel">
+                <!-- Kiindulópont választó -->
+                <div class="valaszto-blokk" id="indulas-blokk">
+                    <div class="valaszto-cimke indulas">
+                        <span>🚩 Kiindulópont</span>
+                        <span class="talalat-szamlalo" id="indulas-szamlalo">367 település</span>
+                    </div>
+                    <div class="combobox-doboz">
+                        <input type="text" id="indulas-input" class="combobox-input indulas-input" value="Dunakeszi" placeholder="Válassz vagy írj be kiindulópontot..." autocomplete="off"
+                            onfocus="nyitLista('indulas', true)"
+                            oninput="szurLista('indulas', this.value)"
+                            onkeydown="if(event.key==='Enter') keresEgyebTelepulest('indulas')">
+                        <div class="combobox-gombok">
+                            <button type="button" class="combobox-torol" title="Mező törlése" onclick="torolMezo('indulas')">✕</button>
+                            <button type="button" class="combobox-nyil" title="Lista megnyitása" onclick="valtLista('indulas')">▼</button>
+                        </div>
+                        <div id="indulas-lista" class="combobox-lista indulas-lista"></div>
+                    </div>
+                    <button type="button" id="btn-egyeb-indulas" class="egyeb-telepules-gomb" onclick="keresEgyebTelepulest('indulas')">
+                        📍 Egyéb magyar település betöltése kiindulópontként
+                    </button>
+                </div>
+
+                <!-- Felcserélő gomb -->
+                <div class="csere-sor">
+                    <div class="csere-vonal"></div>
+                    <button type="button" id="btn-csere" class="csere-gomb" onclick="felcserelPontokat()" disabled title="Kiindulópont és úti cél felcserélése">
+                        ⇅ Felcserélés
+                    </button>
+                    <div class="csere-vonal"></div>
+                </div>
+
+                <!-- Úti cél választó -->
+                <div class="valaszto-blokk" id="cel-blokk">
+                    <div class="valaszto-cimke cel">
+                        <span>🏁 Úti cél</span>
+                        <span class="talalat-szamlalo" id="cel-szamlalo">367 település</span>
+                    </div>
+                    <div class="combobox-doboz">
+                        <input type="text" id="cel-input" class="combobox-input" placeholder="Válassz úti célt (kattints ide vagy írj be egy várost, pl. Alsóörs)..." autocomplete="off"
+                            onfocus="nyitLista('cel', true)"
+                            oninput="szurLista('cel', this.value)"
+                            onkeydown="if(event.key==='Enter') keresEgyebTelepulest('cel')">
+                        <div class="combobox-gombok">
+                            <button type="button" class="combobox-torol" title="Mező törlése" onclick="torolMezo('cel')">✕</button>
+                            <button type="button" class="combobox-nyil" title="Lista megnyitása" onclick="valtLista('cel')">▼</button>
+                        </div>
+                        <div id="cel-lista" class="combobox-lista"></div>
+                    </div>
+                    <button type="button" id="btn-egyeb-telepules" class="egyeb-telepules-gomb" onclick="keresEgyebTelepulest('cel')">
+                        📍 Egyéb magyar település keresése a térképen
+                    </button>
+                </div>
+
+                <div class="esemeny-elvalaszto"></div>
+
+                <!-- Közelgő motoros események választó (dátum szerint) -->
+                <div class="valaszto-blokk" id="esemeny-blokk">
+                    <div class="valaszto-cimke esemeny">
+                        <span>🏍️ Közelgő motoros események (dátum szerint)</span>
+                        <span class="talalat-szamlalo" id="esemeny-szamlalo">0 esemény</span>
+                    </div>
+                    <div class="combobox-doboz">
+                        <input type="text" id="esemeny-input" class="combobox-input esemeny-input" placeholder="Válassz közelgő motoros találkozót vagy túrát dátum szerint..." autocomplete="off"
+                            onfocus="nyitLista('esemeny', true)"
+                            oninput="szurLista('esemeny', this.value)">
+                        <div class="combobox-gombok">
+                            <button type="button" class="combobox-torol" title="Mező törlése" onclick="torolMezo('esemeny')">✕</button>
+                            <button type="button" class="combobox-nyil" title="Eseménylista megnyitása" onclick="valtLista('esemeny')">▼</button>
+                        </div>
+                        <div id="esemeny-lista" class="combobox-lista esemeny-lista"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="kartya">
+                <div id="legkozelebbi-sav" class="legkozelebbi-sav"></div>
+                <div id="varos">Válassz úti célt vagy találkozót!</div>
+                <div id="megye">Válassz települést, válassz egy eseményt a listából, vagy nyomd meg „A következő motoros program” gombot...</div>
+                
+                <div class="reszletek" id="tavolsag-doboz">
+                    <div class="ut-opcio autopalya aktiv" id="btn-auto" onclick="valasztUt('auto')">
+                        <span class="cimke">
+                            <svg class="chopper-ikon" viewBox="0 0 28 22" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <circle cx="5.5" cy="16.5" r="3.4" fill="none" stroke="#f3f4f6" stroke-width="1.8"/>
+                                <circle cx="5.5" cy="16.5" r="1" fill="#f3f4f6"/>
+                                <circle cx="22.5" cy="16.5" r="3.4" fill="none" stroke="#f3f4f6" stroke-width="1.8"/>
+                                <circle cx="22.5" cy="16.5" r="1" fill="#f3f4f6"/>
+                                <line x1="22.5" y1="16.5" x2="15.8" y2="5.5" stroke="#f3f4f6" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M15.8 5.5 L13.8 3.2 L12 3.8" fill="none" stroke="#f3f4f6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="17.5" cy="7.5" r="1.1" fill="#ff6b00"/>
+                                <path d="M5 6 L7 12.5 L10.8 12.5 L16 8.2 L15.2 16 L5.5 16.5" fill="none" stroke="#f3f4f6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M10.8 12.3 C11.8 9.2, 14.5 7.6, 16.2 8.4 C16.4 9.6, 14.2 11.8, 10.8 12.3 Z" fill="#ff6b00"/>
+                                <polygon points="10.5,12.5 14.5,12.5 15,15.8 10,15.8" fill="#f3f4f6"/>
+                                <line x1="13.5" y1="15.8" x2="2.5" y2="15.8" stroke="#f3f4f6" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            Autópályán (fizetős)
+                        </span>
+                        <span id="tav-auto">Számítás...</span>
+                    </div>
+                    <div class="ut-opcio elkerulo" id="btn-sima" onclick="valasztUt('sima')">
+                        <span class="cimke">🌲 Autópálya érintése nélkül</span>
+                        <span id="tav-sima">Számítás...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="terkep"></div>
+        </main>
+
+        <!-- JOBB OLDAL: Közelgő motoros találkozók + Település információk + Ez történt eddig... -->
+        <div class="jobb-oszlop">
+            <aside class="oldalsav">
+                <div class="oldalsav-fejlec">
+                    <h2>🏍️ Motoros találkozók (20 km)</h2>
+                    <button type="button" id="btn-frissit-rendezvenyek" class="frissit-gomb" onclick="frissitOsszesRendezveny(true)" title="Frissítés: autosnaptar.hu, zsakbamacska.eu, programturizmus.hu, csajokamotoron.hu">🔄 Frissítés</button>
+                </div>
+                <div id="forras-allapot" class="forras-allapot">⏳ Csatlakozás a motoros eseménynaptárakhoz (4 forrás)...</div>
+                <div id="motoros-rendezvenyek-tartalom">
+                    <p class="ures-allapot">A település 20 km-es körzetében található közelgő motoros találkozók és gurulások itt jelennek meg.</p>
+                </div>
+            </aside>
+
+            <aside class="oldalsav">
+                <div class="oldalsav-fejlec">
+                    <h2>🏙️ Település információk</h2>
+                </div>
+                <div id="varos-info-tartalom">
+                    <p class="ures-allapot">Válassz egy települést, hogy lásd a területét, lakosságát, járását, irányítószámát és a legfőbb látnivalókat.</p>
+                </div>
+            </aside>
+
+            <aside class="oldalsav elmult-doboz">
+                <div class="oldalsav-fejlec">
+                    <h2>📜 Ez történt eddig...</h2>
+                    <span id="elmult-szamlalo" class="elmult-szamlalo-jelveny">0 esemény</span>
+                </div>
+                <div id="elmult-szuro-sav" class="elmult-szuro-sav">
+                    <button type="button" id="btn-elmult-osszes" class="elmult-szuro-gomb aktiv" onclick="valtElmultSzuro('osszes')">Összes elmúlt</button>
+                    <button type="button" id="btn-elmult-kozel" class="elmult-szuro-gomb" onclick="valtElmultSzuro('kozel')">20 km-en belül</button>
+                </div>
+                <div class="elmult-gorgetheto" id="elmult-rendezvenyek-tartalom">
+                    <p class="ures-allapot">A már lezajlott motoros találkozók és túrák itt jelennek meg.</p>
+                </div>
+            </aside>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+    
+    <!-- Moduláris JavaScript fájlok -->
+    <script src="varosok.js"></script>
+    <script src="esemenyek.js"></script>
+    <script src="terkep.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>
