@@ -199,6 +199,7 @@
         <span id="latogato-doboz" style="display: inline-flex; align-items: center; gap: 6px; background: #171920; border: 1px solid #2b2f3c; padding: 7px 16px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
             👁️ Látogatók száma: <b id="latogato-szamlalo" style="color: #ffb36b;">betöltés...</b>
         </span>
+        <span id="busuanzi_container_site_pv" style="display: none;"><span id="busuanzi_value_site_pv"></span></span>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -210,10 +211,10 @@
     <script src="terkep.js"></script>
     <script src="app.js"></script>
 
-
     <script>
         (async function frissitLatogatoSzamlalot() {
             const szamlaloElem = document.getElementById("latogato-szamlalo");
+            const dobozElem = document.getElementById("latogato-doboz");
             if (!szamlaloElem) return;
 
             const marSzamolva = sessionStorage.getItem("motoros_latogatas_szamolva");
@@ -243,20 +244,30 @@
                 }
             } catch (e) {}
 
-            // 2. Tartalék számláló (CounterAPI)
+            // 2. Tartalék számláló (Busuanzi JSONP)
             try {
-                const counterUrl = marSzamolva
-                    ? "https://api.counterapi.dev/v1/motoros-esemenyek-hu/latogatok"
-                    : "https://api.counterapi.dev/v1/motoros-esemenyek-hu/latogatok/up";
-                const adat = await lekerIdokorlattal(counterUrl);
-                if (typeof adat.count === "number") {
-                    szamlaloElem.innerText = adat.count.toLocaleString("hu-HU");
-                    sessionStorage.setItem("motoros_latogatas_szamolva", "1");
-                    return;
-                }
-            } catch (e) {}
+                const pvElem = document.getElementById("busuanzi_value_site_pv");
+                const bszScript = document.createElement("script");
+                bszScript.async = true;
+                bszScript.src = "https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js";
+                document.body.appendChild(bszScript);
 
-            szamlaloElem.innerText = "blokkolva (AdBlock)";
+                let probalkozas = 0;
+                const ellenorzo = setInterval(() => {
+                    probalkozas++;
+                    const ertek = pvElem ? parseInt(pvElem.innerText.replace(/\D/g, ""), 10) : NaN;
+                    if (!isNaN(ertek) && ertek > 0) {
+                        clearInterval(ellenorzo);
+                        szamlaloElem.innerText = ertek.toLocaleString("hu-HU");
+                        sessionStorage.setItem("motoros_latogatas_szamolva", "1");
+                    } else if (probalkozas >= 12) {
+                        clearInterval(ellenorzo);
+                        if (dobozElem) dobozElem.style.display = "none";
+                    }
+                }, 400);
+            } catch (e) {
+                if (dobozElem) dobozElem.style.display = "none";
+            }
         })();
     </script>
 
