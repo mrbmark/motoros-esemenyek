@@ -22,6 +22,12 @@ try { utolsoUtvonalAdatok; } catch (e) { window.utolsoUtvonalAdatok = { auto: nu
 
 // --- SEGÉDFÜGGVÉNYEK ---
 
+function getVarosokLista() {
+    if (typeof varosok !== "undefined" && Array.isArray(varosok)) return varosok;
+    if (typeof window !== "undefined" && Array.isArray(window.varosok)) return window.varosok;
+    return [];
+}
+
 function ekezetNelkul(szoveg) {
     return (szoveg || "")
         .toString()
@@ -52,18 +58,19 @@ function formazIdotartam(masodperc) {
 }
 
 function keresHelyszintSzovegben(szoveg) {
-    if (!szoveg || typeof varosok === "undefined" || !Array.isArray(varosok)) return null;
+    const lista = getVarosokLista();
+    if (!szoveg || lista.length === 0) return null;
     const normSzoveg = ekezetNelkul(szoveg);
     if (!normSzoveg) return null;
 
     // Először megnézzük a vessző vagy zárójel előtti első részt (pl. "Győr, Land-Plan Hotel" -> "Győr")
     const elsoResz = ekezetNelkul(szoveg.split(",")[0].split("(")[0]);
     if (elsoResz) {
-        const pontosElso = varosok.find(v => ekezetNelkul(v.nev) === elsoResz);
+        const pontosElso = lista.find(v => ekezetNelkul(v.nev) === elsoResz);
         if (pontosElso) return pontosElso;
     }
 
-    const rendezettVarosok = [...varosok].sort((a, b) => b.nev.length - a.nev.length);
+    const rendezettVarosok = [...lista].sort((a, b) => b.nev.length - a.nev.length);
 
     for (const v of rendezettVarosok) {
         const normVaros = ekezetNelkul(v.nev);
@@ -81,19 +88,30 @@ function keresHelyszintSzovegben(szoveg) {
 function escapeHtml(str) {
     return (str || "")
         .toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+        .replace(/&/g, "&")
+        .replace(/</g, "<")
+        .replace(/>/g, ">")
+        .replace(/"/g, """);
 }
 
 // --- LEGÖRDÜLŐ LISTÁK KEZELÉSE (KIINDULÓPONT, ÚTI CÉL, ESEMÉNYEK) ---
 
+function mutatLegordulo(listaElem) {
+    if (!listaElem) return;
+    listaElem.classList.add("nyitva", "aktiv");
+    listaElem.style.display = "block";
+}
+
+function elrejtLegordulo(listaElem) {
+    if (!listaElem) return;
+    listaElem.classList.remove("nyitva", "aktiv");
+    listaElem.style.display = "none";
+}
+
 function nyitLista(tipus, mutatMind = false) {
     ["indulas", "cel", "esemeny"].forEach(t => {
         if (t !== tipus) {
-            const masik = document.getElementById(`${t}-lista`);
-            if (masik) masik.classList.remove("nyitva");
+            elrejtLegordulo(document.getElementById(`${t}-lista`));
         }
     });
 
@@ -108,14 +126,15 @@ function nyitLista(tipus, mutatMind = false) {
         renderVarosLegordulo(tipus, szuro);
     }
 
-    listaElem.classList.add("nyitva");
+    mutatLegordulo(listaElem);
 }
 
 function valtLista(tipus) {
     const listaElem = document.getElementById(`${tipus}-lista`);
     if (!listaElem) return;
-    if (listaElem.classList.contains("nyitva")) {
-        listaElem.classList.remove("nyitva");
+    const nyitvaVan = listaElem.classList.contains("nyitva") || listaElem.style.display === "block";
+    if (nyitvaVan) {
+        elrejtLegordulo(listaElem);
     } else {
         nyitLista(tipus, true);
         const inputElem = document.getElementById(`${tipus}-input`);
@@ -125,7 +144,7 @@ function valtLista(tipus) {
 
 function szurLista(tipus, kereses) {
     const listaElem = document.getElementById(`${tipus}-lista`);
-    if (listaElem) listaElem.classList.add("nyitva");
+    mutatLegordulo(listaElem);
 
     if (tipus === "esemeny") {
         renderEsemenyLegordulo(kereses);
@@ -153,19 +172,25 @@ function torolMezo(tipus) {
         renderVarosLegordulo(tipus, "");
     }
 
-    const listaElem = document.getElementById(`${tipus}-lista`);
-    if (listaElem) listaElem.classList.add("nyitva");
+    mutatLegordulo(document.getElementById(`${tipus}-lista`));
 }
 
 function renderVarosLegordulo(tipus, szuro = "") {
     const listaElem = document.getElementById(`${tipus}-lista`);
     const szamlaloElem = document.getElementById(`${tipus}-szamlalo`);
-    if (!listaElem || typeof varosok === "undefined") return;
+    if (!listaElem) return;
+
+    const varosLista = getVarosokLista();
+    if (varosLista.length === 0) {
+        if (szamlaloElem) szamlaloElem.innerText = "0 település";
+        listaElem.innerHTML = `<div class="combobox-ures">⚠️ A településlista (<b>varosok.js</b>) nem töltődött be. Ellenőrizd, hogy fent van-e a GitHubon!</div>`;
+        return;
+    }
 
     const normSzuro = ekezetNelkul(szuro);
     const talalatok = [];
 
-    varosok.forEach((v, idx) => {
+    varosLista.forEach((v, idx) => {
         if (!normSzuro ||
             ekezetNelkul(v.nev).includes(normSzuro) ||
             ekezetNelkul(v.megye || "").includes(normSzuro) ||
@@ -189,7 +214,7 @@ function renderVarosLegordulo(tipus, szuro = "") {
     const aktivPont = tipus === "indulas" ? aktualisIndulas : aktualisCel;
     const kattintasFn = tipus === "indulas" ? "valasztIndulasElem" : "valasztCelElem";
 
-    listaElem.innerHTML = talalatok.slice(0, 120).map(({ v, idx }) => {
+    listaElem.innerHTML = talalatok.map(({ v, idx }) => {
         const isSelected = aktivPont && ekezetNelkul(aktivPont.nev) === ekezetNelkul(v.nev);
         return `
             <div class="combobox-elem${isSelected ? " kivalasztva" : ""}" onmousedown="event.preventDefault(); ${kattintasFn}(${idx})">
@@ -248,8 +273,9 @@ function renderEsemenyLegordulo(szuro = "") {
 // --- PONT VÁLASZTÁSA (INDULÁS, CÉL, ESEMÉNY) ---
 
 function valasztIndulasElem(varosIdx) {
-    if (typeof varosok === "undefined" || !varosok[varosIdx]) return;
-    aktualisIndulas = varosok[varosIdx];
+    const varosLista = getVarosokLista();
+    if (!varosLista[varosIdx]) return;
+    aktualisIndulas = varosLista[varosIdx];
 
     const inputElem = document.getElementById("indulas-input");
     if (inputElem) inputElem.value = aktualisIndulas.nev;
@@ -257,8 +283,7 @@ function valasztIndulasElem(varosIdx) {
     const fejlecIndulas = document.getElementById("fejlec-indulas");
     if (fejlecIndulas) fejlecIndulas.innerText = aktualisIndulas.nev;
 
-    const listaElem = document.getElementById("indulas-lista");
-    if (listaElem) listaElem.classList.remove("nyitva");
+    elrejtLegordulo(document.getElementById("indulas-lista"));
 
     frissitCsereGombAllapot();
     if (aktualisCel) {
@@ -269,8 +294,9 @@ function valasztIndulasElem(varosIdx) {
 }
 
 function valasztCelElem(varosIdx, megtartTalalkozo = false) {
-    if (typeof varosok === "undefined" || !varosok[varosIdx]) return;
-    aktualisCel = varosok[varosIdx];
+    const varosLista = getVarosokLista();
+    if (!varosLista[varosIdx]) return;
+    aktualisCel = varosLista[varosIdx];
 
     if (!megtartTalalkozo) {
         kiemeltTalalkozoCel = null;
@@ -286,8 +312,7 @@ function valasztCelElem(varosIdx, megtartTalalkozo = false) {
     const celInput = document.getElementById("cel-input");
     if (celInput) celInput.value = aktualisCel.nev;
 
-    const listaElem = document.getElementById("cel-lista");
-    if (listaElem) listaElem.classList.remove("nyitva");
+    elrejtLegordulo(document.getElementById("cel-lista"));
 
     frissitCsereGombAllapot();
     frissitKivalasztottCelNezet(megtartTalalkozo);
@@ -301,8 +326,7 @@ function valasztEsemenyElem(kozelgoIdx) {
     const esemenyInput = document.getElementById("esemeny-input");
     if (esemenyInput) esemenyInput.value = rend.nev;
 
-    const listaElem = document.getElementById("esemeny-lista");
-    if (listaElem) listaElem.classList.remove("nyitva");
+    elrejtLegordulo(document.getElementById("esemeny-lista"));
 
     const sav = document.getElementById("legkozelebbi-sav");
     if (sav) {
@@ -311,18 +335,19 @@ function valasztEsemenyElem(kozelgoIdx) {
         sav.innerHTML = `🏍️ Kiválasztott esemény: <b>${escapeHtml(rend.nev)}</b><br>📅 ${escapeHtml(rend.datum)} • 📍 ${escapeHtml(rend.hely)}`;
     }
 
+    const varosLista = getVarosokLista();
     let varosIdx = -1;
-    if (typeof varosok !== "undefined") {
+    if (varosLista.length > 0) {
         if (rend.varosNev) {
-            varosIdx = varosok.findIndex(v => ekezetNelkul(v.nev) === ekezetNelkul(rend.varosNev));
+            varosIdx = varosLista.findIndex(v => ekezetNelkul(v.nev) === ekezetNelkul(rend.varosNev));
         }
         if (varosIdx === -1 && rend.hely) {
             const helyVaros = rend.hely.split(",")[0].split("(")[0].trim();
-            varosIdx = varosok.findIndex(v => ekezetNelkul(v.nev) === ekezetNelkul(helyVaros));
+            varosIdx = varosLista.findIndex(v => ekezetNelkul(v.nev) === ekezetNelkul(helyVaros));
         }
         if (varosIdx === -1) {
             let minTav = Infinity;
-            varosok.forEach((v, idx) => {
+            varosLista.forEach((v, idx) => {
                 const t = tavolsagKm(v.lat, v.lng, rend.lat, rend.lng);
                 if (t < minTav) { minTav = t; varosIdx = idx; }
             });
@@ -411,8 +436,9 @@ async function keresEgyebTelepulest(tipus) {
         return;
     }
 
-    if (typeof varosok !== "undefined") {
-        const pontosIdx = varosok.findIndex(v => ekezetNelkul(v.nev) === ekezetNelkul(kereses));
+    const varosLista = getVarosokLista();
+    if (varosLista.length > 0) {
+        const pontosIdx = varosLista.findIndex(v => ekezetNelkul(v.nev) === ekezetNelkul(kereses));
         if (pontosIdx !== -1) {
             if (tipus === "indulas") valasztIndulasElem(pontosIdx);
             else valasztCelElem(pontosIdx, false);
@@ -448,8 +474,7 @@ async function keresEgyebTelepulest(tipus) {
             lng: parseFloat(talalat.lon)
         };
 
-        const listaElem = document.getElementById(`${tipus}-lista`);
-        if (listaElem) listaElem.classList.remove("nyitva");
+        elrejtLegordulo(document.getElementById(`${tipus}-lista`));
 
         if (tipus === "indulas") {
             aktualisIndulas = egyediPont;
@@ -509,13 +534,17 @@ function frissitKivalasztottCelNezet(megtartTalalkozo = false) {
     }
     renderVarosInfo(aktualisCel);
 
-    if (typeof tervezUtvonal === "function") {
-        tervezUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
-    } else if (typeof frissitTerkepUtvonal === "function") {
-        frissitTerkepUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
-    } else if (typeof szamolUtvonal === "function") {
-        szamolUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
-    } else {
+    try {
+        if (typeof tervezUtvonal === "function") {
+            tervezUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
+        } else if (typeof frissitTerkepUtvonal === "function") {
+            frissitTerkepUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
+        } else if (typeof szamolUtvonal === "function") {
+            szamolUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
+        } else {
+            tervezBeepitettUtvonal(aktualisIndulas, aktualisCel);
+        }
+    } catch (e) {
         tervezBeepitettUtvonal(aktualisIndulas, aktualisCel);
     }
 }
@@ -566,7 +595,7 @@ function inicializalTerkepHaKell() {
         sajatTerkep = L.map("terkep").setView([alapLat, alapLng], 8);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 18,
-            attribution: '&copy; OpenStreetMap'
+            attribution: '© OpenStreetMap'
         }).addTo(sajatTerkep);
     }
 
@@ -702,29 +731,37 @@ if (typeof visszaTeljesUtvonalra !== "function") {
 document.addEventListener("click", function(e) {
     if (!e.target.closest(".combobox-doboz")) {
         ["indulas", "cel", "esemeny"].forEach(t => {
-            const lista = document.getElementById(`${t}-lista`);
-            if (lista) lista.classList.remove("nyitva");
+            elrejtLegordulo(document.getElementById(`${t}-lista`));
         });
     }
 });
 
 function inditAlkalmazast() {
-    if (typeof varosok !== "undefined" && Array.isArray(varosok) && varosok.length > 0) {
-        const dunakeszi = varosok.find(v => ekezetNelkul(v.nev) === "dunakeszi") || varosok[0];
+    const varosLista = getVarosokLista();
+    if (varosLista.length > 0) {
+        const dunakeszi = varosLista.find(v => ekezetNelkul(v.nev) === "dunakeszi") || varosLista[0];
         aktualisIndulas = dunakeszi;
         const indulasInput = document.getElementById("indulas-input");
         if (indulasInput) indulasInput.value = dunakeszi.nev;
         const fejlecIndulas = document.getElementById("fejlec-indulas");
         if (fejlecIndulas) fejlecIndulas.innerText = dunakeszi.nev;
-        renderVarosLegordulo("indulas", "");
-        renderVarosLegordulo("cel", "");
     }
 
-    if (typeof initTerkep === "function") {
-        initTerkep();
-    } else if (typeof inicializalTerkep === "function") {
-        inicializalTerkep();
-    } else {
+    renderVarosLegordulo("indulas", "");
+    renderVarosLegordulo("cel", "");
+
+    try {
+        if (typeof initTerkep === "function") {
+            initTerkep();
+        } else if (typeof inicializalTerkep === "function") {
+            inicializalTerkep();
+        } else {
+            const map = inicializalTerkepHaKell();
+            if (map && aktualisIndulas) {
+                kozepreTerkepPont(aktualisIndulas.lat, aktualisIndulas.lng, `🚩 Indulás: ${aktualisIndulas.nev}`);
+            }
+        }
+    } catch (e) {
         const map = inicializalTerkepHaKell();
         if (map && aktualisIndulas) {
             kozepreTerkepPont(aktualisIndulas.lat, aktualisIndulas.lng, `🚩 Indulás: ${aktualisIndulas.nev}`);
