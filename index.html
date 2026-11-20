@@ -214,26 +214,49 @@
     <script>
         (async function frissitLatogatoSzamlalot() {
             const szamlaloElem = document.getElementById("latogato-szamlalo");
-            const dobozElem = document.getElementById("latogato-doboz");
-            const alapUrl = "https://api.counterapi.dev/v1/motoros-esemenyek-hu/latogatok";
+            if (!szamlaloElem) return;
 
+            const marSzamolva = sessionStorage.getItem("motoros_latogatas_szamolva");
+
+            async function lekerIdokorlattal(url, ms = 5000) {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), ms);
+                try {
+                    const res = await fetch(url, { signal: controller.signal });
+                    if (!res.ok) throw new Error("HTTP " + res.status);
+                    return await res.json();
+                } finally {
+                    clearTimeout(id);
+                }
+            }
+
+            // 1. Elsődleges számláló (Abacus API)
             try {
-                // Ha ebben a munkamenetben még nem számoltuk, növeljük 1-gyel (/up), különben csak lekérdezzük
-                const marSzamolva = sessionStorage.getItem("motoros_latogatas_szamolva");
-                const vegpont = marSzamolva ? alapUrl : `${alapUrl}/up`;
+                const abacusUrl = marSzamolva
+                    ? "https://abacus.jasoncameron.dev/get/motoros-esemenyek-hu/latogatok"
+                    : "https://abacus.jasoncameron.dev/hit/motoros-esemenyek-hu/latogatok";
+                const adat = await lekerIdokorlattal(abacusUrl);
+                if (typeof adat.value === "number") {
+                    szamlaloElem.innerText = adat.value.toLocaleString("hu-HU");
+                    sessionStorage.setItem("motoros_latogatas_szamolva", "1");
+                    return;
+                }
+            } catch (e) {}
 
-                const valasz = await fetch(vegpont);
-                if (!valasz.ok) throw new Error("Számláló nem elérhető");
-
-                const adat = await valasz.json();
+            // 2. Tartalék számláló (CounterAPI)
+            try {
+                const counterUrl = marSzamolva
+                    ? "https://api.counterapi.dev/v1/motoros-esemenyek-hu/latogatok"
+                    : "https://api.counterapi.dev/v1/motoros-esemenyek-hu/latogatok/up";
+                const adat = await lekerIdokorlattal(counterUrl);
                 if (typeof adat.count === "number") {
                     szamlaloElem.innerText = adat.count.toLocaleString("hu-HU");
                     sessionStorage.setItem("motoros_latogatas_szamolva", "1");
+                    return;
                 }
-            } catch (e) {
-                // Ha egy reklámblokkoló tiltja a külső kérést, elrejtjük a dobozt
-                if (dobozElem) dobozElem.style.display = "none";
-            }
+            } catch (e) {}
+
+            szamlaloElem.innerText = "blokkolva (AdBlock)";
         })();
     </script>
 
