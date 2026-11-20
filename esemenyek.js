@@ -301,8 +301,6 @@ function feldolgozCsvSzoveget(csvSzoveg) {
                     ? (keresHelyszintSzovegben(hely) || keresHelyszintSzovegben(nev))
                     : null;
 
-                // Megőrizzük a teljes beírt helyszínt (pl. "Győr, Land-Plan Hotel & Restaurant"),
-                // ha csak a város neve szerepel, akkor kiegészítjük a vármegyével.
                 let megjelenitettHely = hely;
                 if (!megjelenitettHely && varosTalalat) {
                     megjelenitettHely = `${varosTalalat.nev} (${varosTalalat.rovidMegye})`;
@@ -356,7 +354,6 @@ function ervenyesCsvE(szoveg) {
 async function letoltGoogleCsv() {
     const frissUrl = `${GOOGLE_SHEET_CSV_URL}&t=${Date.now()}`;
 
-    // 1. Közvetlen letöltés
     try {
         const res = await fetchIdokorlattal(GOOGLE_SHEET_CSV_URL, 7000);
         if (res.ok) {
@@ -365,7 +362,6 @@ async function letoltGoogleCsv() {
         }
     } catch (e) {}
 
-    // 2. Tartalék útvonalak (ha egy böngésző adatvédelmi módja blokkolja a Google átirányítását)
     const proxyUrlLista = [
         `https://corsproxy.io/?url=${encodeURIComponent(frissUrl)}`,
         `https://api.allorigins.win/raw?url=${encodeURIComponent(frissUrl)}`,
@@ -382,10 +378,9 @@ async function letoltGoogleCsv() {
         } catch (e) {}
     }
 
-    throw new Error("A Google Táblázat nem érhető el (ellenőrizd a nyilvános közzétételt).");
+    throw new Error("A Google Táblázat nem érhető el.");
 }
 
-// Automatikus Google Táblázat CSV betöltés
 async function frissitOsszesRendezveny() {
     const allapotDoboz = document.getElementById("forras-allapot");
     const frissitGomb = document.getElementById("btn-frissit-rendezvenyek");
