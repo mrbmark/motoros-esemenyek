@@ -546,17 +546,46 @@ function frissitKivalasztottCelNezet(megtartTalalkozo = false) {
     }
     renderVarosInfo(aktualisCel);
 
-    try {
-        if (typeof tervezUtvonal === "function") {
-            tervezUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
-        } else if (typeof frissitTerkepUtvonal === "function") {
-            frissitTerkepUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
-        } else if (typeof szamolUtvonal === "function") {
-            szamolUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
-        } else {
-            tervezBeepitettUtvonal(aktualisIndulas, aktualisCel);
+    if (!aktualisIndulas) {
+        const varosLista = getVarosokLista();
+        if (varosLista.length > 0) {
+            aktualisIndulas = varosLista.find(v => ekezetNelkul(v.nev) === "dunakeszi") || varosLista[0];
         }
-    } catch (e) {
+    }
+
+    window.aktualisIndulas = aktualisIndulas;
+    window.aktualisCel = aktualisCel;
+    window.kiemeltTalalkozoCel = kiemeltTalalkozoCel;
+
+    const btnSima = document.getElementById("btn-sima");
+    const aktivMod = (btnSima && btnSima.classList.contains("aktiv")) ? "sima" : (aktualisUtMod || "auto");
+
+    let terkepKezelte = false;
+    const terkepFuggvenyek = [
+        "tervezUtvonal", "tervezUtvonalat", "tervezUtvonalakat",
+        "frissitUtvonal", "frissitUtvonalat", "frissitUtvonalakat",
+        "frissitTerkepUtvonal", "szamolUtvonal", "szamolUtvonalat",
+        "szamolUtvonalakat", "inditUtvonalTervezest", "utvonalTervezes", "tervezUtakat"
+    ];
+
+    for (const fnNev of terkepFuggvenyek) {
+        if (typeof window[fnNev] === "function") {
+            try {
+                window[fnNev](aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
+                terkepKezelte = true;
+                break;
+            } catch (e) {}
+        }
+    }
+
+    if (typeof valasztUt === "function") {
+        try {
+            valasztUt(aktivMod);
+            terkepKezelte = true;
+        } catch (e) {}
+    }
+
+    if (!terkepKezelte) {
         tervezBeepitettUtvonal(aktualisIndulas, aktualisCel);
     }
 }
@@ -670,28 +699,30 @@ async function tervezBeepitettUtvonal(indulas, cel) {
 }
 
 function megjelenitAktivBeepitettUtvonal(map, indulas, cel) {
-    if (!map) return;
+    if (map) {
+        if (sajatIndulasMarker) map.removeLayer(sajatIndulasMarker);
+        if (sajatCelMarker) map.removeLayer(sajatCelMarker);
+        if (sajatUtvonalVonal) map.removeLayer(sajatUtvonalVonal);
 
-    if (sajatIndulasMarker) map.removeLayer(sajatIndulasMarker);
-    if (sajatCelMarker) map.removeLayer(sajatCelMarker);
-    if (sajatUtvonalVonal) map.removeLayer(sajatUtvonalVonal);
-
-    sajatIndulasMarker = L.marker([indulas.lat, indulas.lng]).addTo(map).bindPopup(`🚩 Indulás: <b>${escapeHtml(indulas.nev)}</b>`);
-    const celPopup = kiemeltTalalkozoCel
-        ? `🏍️ <b>${escapeHtml(kiemeltTalalkozoCel.nev)}</b><br>📍 ${escapeHtml(kiemeltTalalkozoCel.hely)}`
-        : `🏁 Úti cél: <b>${escapeHtml(cel.nev)}</b>`;
-    sajatCelMarker = L.marker([cel.lat, cel.lng]).addTo(map).bindPopup(celPopup).openPopup();
+        sajatIndulasMarker = L.marker([indulas.lat, indulas.lng]).addTo(map).bindPopup(`🚩 Indulás: <b>${escapeHtml(indulas.nev)}</b>`);
+        const celPopup = kiemeltTalalkozoCel
+            ? `🏍️ <b>${escapeHtml(kiemeltTalalkozoCel.nev)}</b><br>📍 ${escapeHtml(kiemeltTalalkozoCel.hely)}`
+            : `🏁 Úti cél: <b>${escapeHtml(cel.nev)}</b>`;
+        sajatCelMarker = L.marker([cel.lat, cel.lng]).addTo(map).bindPopup(celPopup).openPopup();
+    }
 
     const aktivRoute = utolsoUtvonalAdatok[aktualisUtMod] || utolsoUtvonalAdatok.auto;
     const osszegzoElem = document.getElementById("utvonal-osszegzo");
     const listaElem = document.getElementById("utvonal-lista");
 
     if (aktivRoute && aktivRoute.geometry) {
-        const szin = aktualisUtMod === "auto" ? "#ff6b00" : "#22c55e";
-        sajatUtvonalVonal = L.geoJSON(aktivRoute.geometry, {
-            style: { color: szin, weight: 5, opacity: 0.9 }
-        }).addTo(map);
-        map.fitBounds(sajatUtvonalVonal.getBounds(), { padding: [45, 45] });
+        if (map) {
+            const szin = aktualisUtMod === "auto" ? "#ff6b00" : "#22c55e";
+            sajatUtvonalVonal = L.geoJSON(aktivRoute.geometry, {
+                style: { color: szin, weight: 5, opacity: 0.9 }
+            }).addTo(map);
+            map.fitBounds(sajatUtvonalVonal.getBounds(), { padding: [45, 45] });
+        }
 
         const km = Math.round(aktivRoute.distance / 1000);
         const ido = formazIdotartam(aktivRoute.duration);
