@@ -38,6 +38,43 @@ function getVarosokLista() {
     return [];
 }
 
+function mentIndulasHelyet(pont) {
+    if (!pont || !pont.nev || typeof pont.lat !== "number" || typeof pont.lng !== "number") return;
+    try {
+        localStorage.setItem("motoros_mentett_indulas_v1", JSON.stringify({
+            nev: pont.nev,
+            megye: pont.megye || "",
+            rovidMegye: pont.rovidMegye || "",
+            jaras: pont.jaras || "",
+            irsz: pont.irsz || "",
+            lakossag: pont.lakossag || "",
+            terulet: pont.terulet || "",
+            lat: pont.lat,
+            lng: pont.lng,
+            latnivalok: Array.isArray(pont.latnivalok) ? pont.latnivalok : []
+        }));
+    } catch (e) {}
+}
+
+function betoltMentettIndulast() {
+    try {
+        const nyers = localStorage.getItem("motoros_mentett_indulas_v1");
+        if (!nyers) return null;
+        const adat = JSON.parse(nyers);
+        if (!adat || !adat.nev || typeof adat.lat !== "number" || typeof adat.lng !== "number") return null;
+
+        const varosLista = getVarosokLista();
+        if (varosLista.length > 0) {
+            const egyezes = varosLista.find(v => ekezetNelkul(v.nev) === ekezetNelkul(adat.nev));
+            if (egyezes) return egyezes;
+        }
+        return adat;
+    } catch (e) {
+        return null;
+    }
+}
+
+
 function ekezetNelkul(szoveg) {
     return (szoveg || "")
         .toString()
@@ -288,6 +325,7 @@ function valasztIndulasElem(varosIdx) {
     const varosLista = getVarosokLista();
     if (!varosLista[varosIdx]) return;
     aktualisIndulas = varosLista[varosIdx];
+    mentIndulasHelyet(aktualisIndulas);
 
     const inputElem = document.getElementById("indulas-input");
     if (inputElem) inputElem.value = aktualisIndulas.nev;
@@ -415,6 +453,7 @@ function felcserelPontokat() {
     const temp = aktualisIndulas;
     aktualisIndulas = aktualisCel;
     aktualisCel = temp;
+    mentIndulasHelyet(aktualisIndulas);
 
     const indulasInput = document.getElementById("indulas-input");
     const celInput = document.getElementById("cel-input");
@@ -490,6 +529,7 @@ async function keresEgyebTelepulest(tipus) {
 
         if (tipus === "indulas") {
             aktualisIndulas = egyediPont;
+            mentIndulasHelyet(aktualisIndulas);
             if (inputElem) inputElem.value = nev;
             const fejlecIndulas = document.getElementById("fejlec-indulas");
             if (fejlecIndulas) fejlecIndulas.innerText = nev;
@@ -513,6 +553,123 @@ async function keresEgyebTelepulest(tipus) {
     }
 }
 
+function hasznalSajatHelyzetet() {
+    if (!navigator.geolocation) {
+        alert("A böngésződ nem támogatja a GPS-alapú helymeghatározást.");
+        return;
+    }
+
+    const gombElem = document.getElementById("btn-gps-indulas");
+    const eredetiSzoveg = gombElem ? gombElem.innerText : "";
+    if (gombElem) {
+        gombElem.disabled = true;
+        gombElem.innerText = "⏳ Helyzet lekérése...";
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        async (pozicio) => {
+            const lat = pozicio.coords.latitude;
+            const lng = pozicio.coords.longitude;
+            let talaltPont = null;
+
+            try {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), 5000);
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`;
+                const res = await fetch(url, {
+                    headers: { "Accept-Language": "hu" },
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                if (res.ok) {
+                    const adat = await res.json();
+                    const addr = adat && adat.address ? adat.address : {};
+                    const telepulesNev = addr.city || addr.town || addr.village || addr.municipality || addr.suburb;
+                    if (telepulesNev) {
+                        const varosLista = getVarosokLista();
+                        const egyezes = varosLista.find(v => ekezetNelkul(v.nev) === ekezetNelkul(telepulesNev));
+                        if (egyezes) {
+                            talaltPont = egyezes;
+                        } else {
+                            talaltPont = {
+                                nev: telepulesNev,
+                                megye: addr.county || "Magyarország",
+                                rovidMegye: "HU",
+                                lat: lat,
+                                lng: lng
+                            };
+                        }
+                    }
+                }
+            } catch (e) {}
+
+            if (!talaltPont) {
+                const varosLista = getVarosokLista();
+                if (varosLista.length > 0) {
+                    let legkozelebbi = varosLista[0];
+                    let minTav = Infinity;
+                    for (const v of varosLista) {
+                        const t = tavolsagKm(lat, lng, v.lat, v.lng);
+                        if (t < minTav) {
+                            minTav = t;
+                            legkozelebbi = v;
+                        }
+                    }
+                    talaltPont = minTav <= 8
+                        ? legkozelebbi
+                        : {
+                            nev: `${legkozelebbi.nev} környéke`,
+                            megye: legkozelebbi.megye || "Magyarország",
+                            rovidMegye: legkozelebbi.rovidMegye || "HU",
+                            lat: lat,
+                            lng: lng
+                        };
+                } else {
+                    talaltPont = {
+                        nev: "Sajat helyzetem",
+                        megye: "Magyarország",
+                        rovidMegye: "HU",
+                        lat: lat,
+                        lng: lng
+                    };
+                }
+            }
+
+            aktualisIndulas = talaltPont;
+            mentIndulasHelyet(aktualisIndulas);
+
+            const inputElem = document.getElementById("indulas-input");
+            if (inputElem) inputElem.value = aktualisIndulas.nev;
+
+            const fejlecIndulas = document.getElementById("fejlec-indulas");
+            if (fejlecIndulas) fejlecIndulas.innerText = aktualisIndulas.nev;
+
+            elrejtLegordulo(document.getElementById("indulas-lista"));
+            frissitCsereGombAllapot();
+
+            if (aktualisCel) {
+                frissitKivalasztottCelNezet(true);
+            } else {
+                kozepreTerkepPont(aktualisIndulas.lat, aktualisIndulas.lng, `📡 Kiindulópont: ${aktualisIndulas.nev}`);
+            }
+
+            if (gombElem) {
+                gombElem.disabled = false;
+                gombElem.innerText = eredetiSzoveg;
+            }
+        },
+        () => {
+            if (gombElem) {
+                gombElem.disabled = false;
+                gombElem.innerText = eredetiSzoveg;
+            }
+            alert("Nem sikerült lekérni a jelenlegi helyzetedet. Ellenőrizd, hogy engedélyezve van-e a helymeghatározás a böngészőben!");
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+}
+
+
 // --- KÖZÉPSŐ KÁRTYA, JOBB OLDALI PANELEK ÉS ÚTVONAL FRISSÍTÉSE ---
 
 function frissitKivalasztottCelNezet(megtartTalalkozo = false) {
@@ -529,7 +686,7 @@ function frissitKivalasztottCelNezet(megtartTalalkozo = false) {
     }
 
     if (megyeElem) {
-        const indulasNev = aktualisIndulas ? aktualisIndulas.nev : "Dunakeszi";
+        const indulasNev = aktualisIndulas ? aktualisIndulas.nev : "Budapest";
         const megyeSzoveg = aktualisCel.megye ? ` • ${aktualisCel.megye}` : "";
         megyeElem.innerText = `🚩 ${indulasNev} ➔ 🏁 ${aktualisCel.nev}${megyeSzoveg}`;
     }
@@ -547,9 +704,14 @@ function frissitKivalasztottCelNezet(megtartTalalkozo = false) {
     renderVarosInfo(aktualisCel);
 
     if (!aktualisIndulas) {
-        const varosLista = getVarosokLista();
-        if (varosLista.length > 0) {
-            aktualisIndulas = varosLista.find(v => ekezetNelkul(v.nev) === "dunakeszi") || varosLista[0];
+        const mentett = betoltMentettIndulast();
+        if (mentett) {
+            aktualisIndulas = mentett;
+        } else {
+            const varosLista = getVarosokLista();
+            if (varosLista.length > 0) {
+                aktualisIndulas = varosLista.find(v => ekezetNelkul(v.nev) === "budapest") || varosLista[0];
+            }
         }
     }
 
@@ -781,13 +943,18 @@ document.addEventListener("click", function(e) {
 
 function inditAlkalmazast() {
     const varosLista = getVarosokLista();
-    if (varosLista.length > 0) {
-        const dunakeszi = varosLista.find(v => ekezetNelkul(v.nev) === "dunakeszi") || varosLista[0];
-        aktualisIndulas = dunakeszi;
+    const mentettIndulas = betoltMentettIndulast();
+    if (mentettIndulas) {
+        aktualisIndulas = mentettIndulas;
+    } else if (varosLista.length > 0) {
+        aktualisIndulas = varosLista.find(v => ekezetNelkul(v.nev) === "budapest") || varosLista[0];
+    }
+
+    if (aktualisIndulas) {
         const indulasInput = document.getElementById("indulas-input");
-        if (indulasInput) indulasInput.value = dunakeszi.nev;
+        if (indulasInput) indulasInput.value = aktualisIndulas.nev;
         const fejlecIndulas = document.getElementById("fejlec-indulas");
-        if (fejlecIndulas) fejlecIndulas.innerText = dunakeszi.nev;
+        if (fejlecIndulas) fejlecIndulas.innerText = aktualisIndulas.nev;
     }
 
     renderVarosLegordulo("indulas", "");

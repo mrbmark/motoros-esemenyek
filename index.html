@@ -17,7 +17,7 @@
             <div class="fejlec-ikon">🏍️</div>
             <div>
                 <h1 class="fejlec-cim">Motoros események</h1>
-                <p class="fejlec-alcim">Indulás: <b id="fejlec-indulas">Dunakeszi</b> • Magyarország 348 városa, látnivalói és közelgő motoros találkozói</p>
+                <p class="fejlec-alcim">Indulás: <b id="fejlec-indulas">Budapest</b> • Magyarország 348 városa, látnivalói és közelgő motoros találkozói</p>
             </div>
         </div>
         <button type="button" class="legkozelebbi-gomb" onclick="valasztLegkozelebbiTalalkozo()">
@@ -51,7 +51,7 @@
                         <span class="talalat-szamlalo" id="indulas-szamlalo">367 település</span>
                     </div>
                     <div class="combobox-doboz">
-                        <input type="text" id="indulas-input" name="motoros_indulas_kereso" class="combobox-input indulas-input" value="Dunakeszi" placeholder="Válassz vagy írj be kiindulópontot..." autocomplete="one-time-code" data-lpignore="true" data-form-type="other"
+                        <input type="text" id="indulas-input" name="motoros_indulas_kereso" class="combobox-input indulas-input" value="Budapest" placeholder="Válassz vagy írj be kiindulópontot..." autocomplete="one-time-code" data-lpignore="true" data-form-type="other"
                             onclick="nyitLista('indulas', true)"
                             onfocus="nyitLista('indulas', true)"
                             oninput="szurLista('indulas', this.value)"
@@ -62,9 +62,14 @@
                         </div>
                         <div id="indulas-lista" class="combobox-lista indulas-lista"></div>
                     </div>
-                    <button type="button" id="btn-egyeb-indulas" class="egyeb-telepules-gomb" onclick="keresEgyebTelepulest('indulas')">
-                        📍 Egyéb magyar település betöltése kiindulópontként
-                    </button>
+                    <div style="display: flex; gap: 6px; margin-top: 6px;">
+                        <button type="button" id="btn-egyeb-indulas" class="egyeb-telepules-gomb" style="margin-top: 0; flex: 1;" onclick="keresEgyebTelepulest('indulas')">
+                            📍 Egyéb magyar település
+                        </button>
+                        <button type="button" id="btn-gps-indulas" class="egyeb-telepules-gomb" style="margin-top: 0; flex: 1;" onclick="hasznalSajatHelyzetet()" title="Kiindulópont beállítása a jelenlegi GPS-helyzeted alapján">
+                            📡 Saját helyzetem (GPS)
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Felcserélő gomb -->
