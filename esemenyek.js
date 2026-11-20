@@ -1,4 +1,4 @@
-// --- 1. LÉPÉS: A GOOGLE TÁBLÁZATBÓL KÖZZÉTETT CSV LINK (Az űrlap válaszok) ---
+// --- A GOOGLE TÁBLÁZATBÓL KÖZZÉTETT CSV LINK ---
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ43JAhbtm-5Ga3P_248iizag7emZJOeeREPYFgPyI1F7GK0_xAeOjJoHkSyt2Xd9IEq6g1FpA4PlTW/pub?gid=1851516518&single=true&output=csv";
 
 let osszesRendezveny = [];
@@ -283,19 +283,18 @@ function feldolgozCsvSzoveget(csvSzoveg) {
 
     if (sorok.length > 1) {
         const elvalaszto = sorok[0].includes(";") ? ";" : ",";
+        const fejlecElso = (parseCsvSor(sorok[0], elvalaszto)[0] || "").toLowerCase();
+        const fejlecVanIdobelyeg = fejlecElso.includes("időbélyeg") || fejlecElso.includes("timestamp");
 
         for (let i = 1; i < sorok.length; i++) {
             const mezok = parseCsvSor(sorok[i], elvalaszto);
-            
-            // A Google Űrlap automatikusan betesz egy "Időbélyeg" oszlopot előre (0. index).
-            // Ezt figyelembe vesszük egy +1 eltolással, ha létezik (mezok hossza alapján).
-            const eltolas = mezok.length >= 5 ? 1 : 0;
+            const eltolas = (fejlecVanIdobelyeg || mezok.length >= 5) ? 1 : 0;
 
             if (mezok.length >= 4 + eltolas && mezok[0 + eltolas]) {
-                const nev = (mezok[0 + eltolas] || "").replace(/^["']|["']$/g, '');
-                const datum = (mezok[1 + eltolas] || "").replace(/^["']|["']$/g, '');
-                const idopont = (mezok[2 + eltolas] || "").replace(/^["']|["']$/g, '');
-                const hely = (mezok[3 + eltolas] || "").replace(/^["']|["']$/g, '');
+                const nev = (mezok[0 + eltolas] || "").replace(/^["']|["']$/g, "");
+                const datum = (mezok[1 + eltolas] || "").replace(/^["']|["']$/g, "");
+                const idopont = (mezok[2 + eltolas] || "").replace(/^["']|["']$/g, "");
+                const hely = (mezok[3 + eltolas] || "").replace(/^["']|["']$/g, "");
 
                 const teljesDatum = idopont ? `${datum} (${idopont})` : datum;
                 const varosTalalat = typeof keresHelyszintSzovegben === "function"
@@ -328,6 +327,56 @@ function feldolgozCsvSzoveget(csvSzoveg) {
     return csvEsemenyek.length;
 }
 
+async function fetchIdokorlattal(url, ms = 8000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+        return await fetch(url, { signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+function ervenyesCsvE(szoveg) {
+    if (!szoveg || szoveg.trim().length < 10) return false;
+    const eleje = szoveg.trim().toLowerCase();
+    // Ha HTML oldalt (pl. Google bejelentkezést) adott vissza, nem érvényes CSV
+    if (eleje.startsWith("<!doctype") || eleje.startsWith("<html") || eleje.includes("<body")) return false;
+    return true;
+}
+
+async function letoltGoogleCsv() {
+    const frissUrl = `${GOOGLE_SHEET_CSV_URL}&t=${Date.now()}`;
+
+    // 1. Közvetlen letöltés (tiszta URL, előzetes CORS-kérés nélkül)
+    try {
+        const res = await fetchIdokorlattal(GOOGLE_SHEET_CSV_URL, 7000);
+        if (res.ok) {
+            const szoveg = await res.text();
+            if (ervenyesCsvE(szoveg)) return szoveg;
+        }
+    } catch (e) {}
+
+    // 2. Tartalék útvonalak (ha egy böngésző adatvédelmi módja blokkolja a Google átirányítását)
+    const proxyUrlLista = [
+        `https://corsproxy.io/?url=${encodeURIComponent(frissUrl)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(frissUrl)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(frissUrl)}`
+    ];
+
+    for (const proxyUrl of proxyUrlLista) {
+        try {
+            const res = await fetchIdokorlattal(proxyUrl, 8000);
+            if (res.ok) {
+                const szoveg = await res.text();
+                if (ervenyesCsvE(szoveg)) return szoveg;
+            }
+        } catch (e) {}
+    }
+
+    throw new Error("A Google Táblázat nem érhető el (ellenőrizd a nyilvános közzétételt).");
+}
+
 // Automatikus Google Táblázat CSV betöltés
 async function frissitOsszesRendezveny() {
     const allapotDoboz = document.getElementById("forras-allapot");
@@ -344,14 +393,12 @@ async function frissitOsszesRendezveny() {
             throw new Error("Nincs megadva a Google Sheets CSV link.");
         }
 
-        // Random paraméter a gyorsítótár elkerülésére, hogy mindig a legfrissebb választ kapjuk
-        const url = GOOGLE_SHEET_CSV_URL + (GOOGLE_SHEET_CSV_URL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-        
-        const response = await fetch(url, { cache: "no-store" });
-        if (!response.ok) throw new Error("Nem elérhető a Google Táblázat.");
-
-        const csvSzoveg = await response.text();
+        const csvSzoveg = await letoltGoogleCsv();
         const db = feldolgozCsvSzoveget(csvSzoveg);
+
+        try {
+            localStorage.setItem("motoros_google_csv_cache", csvSzoveg);
+        } catch (e) {}
 
         const ido = new Date().toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" });
         if (allapotDoboz) {
@@ -359,8 +406,19 @@ async function frissitOsszesRendezveny() {
             allapotDoboz.innerHTML = `🟢 Naptár szinkronizálva (${ido}): <b>${db} esemény</b>`;
         }
     } catch (err) {
+        // Tartalék: korábban mentett lista betöltése, ha van
+        let mentettDb = 0;
+        try {
+            const mentettCsv = localStorage.getItem("motoros_google_csv_cache");
+            if (mentettCsv && ervenyesCsvE(mentettCsv)) {
+                mentettDb = feldolgozCsvSzoveget(mentettCsv);
+            }
+        } catch (e) {}
+
         if (allapotDoboz) {
-            allapotDoboz.innerHTML = `⚠️ Hiba a letöltésnél. Ellenőrizd a CSV linket az <b>esemenyek.js</b> fájl tetején!`;
+            allapotDoboz.innerHTML = mentettDb > 0
+                ? `⚠️ Offline mód (${mentettDb} korábbi esemény). A frissítéshez ellenőrizd a Google Táblázat nyilvános megosztását!`
+                : `⚠️ Nem sikerült betölteni az eseményeket. Nyisd meg a Google Táblázatban a <b>Megosztás</b> gombot, és állítsd <b>„Bárki, aki rendelkezik a linkkel”</b> opcióra!`;
         }
     } finally {
         if (frissitGomb) frissitGomb.disabled = false;
