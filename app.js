@@ -88,10 +88,10 @@ function keresHelyszintSzovegben(szoveg) {
 function escapeHtml(str) {
     return (str || "")
         .toString()
-        .replace(/&/g, "&")
-        .replace(/</g, "<")
-        .replace(/>/g, ">")
-        .replace(/"/g, """);
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
 }
 
 // --- LEGÖRDÜLŐ LISTÁK KEZELÉSE (KIINDULÓPONT, ÚTI CÉL, ESEMÉNYEK) ---
@@ -595,7 +595,7 @@ function inicializalTerkepHaKell() {
         sajatTerkep = L.map("terkep").setView([alapLat, alapLng], 8);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 18,
-            attribution: '© OpenStreetMap'
+            attribution: '&copy; OpenStreetMap'
         }).addTo(sajatTerkep);
     }
 
