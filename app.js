@@ -273,7 +273,6 @@ function renderEsemenyLegordulo(szuro = "") {
                 <div class="combobox-elem-bal">
                     <div class="combobox-elem-datum-sor">
                         <span>📅 ${escapeHtml(ev.datum)}</span>
-                        <span class="dropdown-forras-pill">saját</span>
                     </div>
                     <span class="combobox-elem-nev">${escapeHtml(ev.nev)}</span>
                 </div>
