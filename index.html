@@ -158,12 +158,11 @@
                 <div class="oldalsav-fejlec">
                     <h2>🏍️ Motoros találkozók (20 km)</h2>
                     <div class="forras-gombok">
-                        <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="betoltHelyiCsvFajl(event)" />
-                        <button type="button" class="frissit-gomb" onclick="document.getElementById('csv-file-input').click()" title="Saját CSV fájl kiválasztása a gépedről">📂 Tallózás</button>
-                        <button type="button" id="btn-frissit-rendezvenyek" class="frissit-gomb" onclick="frissitOsszesRendezveny()" title="sajat_esemenyek.csv újratöltése">🔄</button>
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSeJ1FbK0xWl6l1w8DUYOfOg-I8PUMIKiTuJOq59xT2d-pZBOQ/viewform?usp=publish-editor" target="_blank" rel="noopener" class="frissit-gomb" style="text-decoration:none;" title="Új esemény beküldése">➕ Beküldés</a>
+                        <button type="button" id="btn-frissit-rendezvenyek" class="frissit-gomb" onclick="frissitOsszesRendezveny()" title="Naptár frissítése">🔄</button>
                     </div>
                 </div>
-                <div id="forras-allapot" class="forras-allapot">⏳ Események betöltése a sajat_esemenyek.csv fájlból...</div>
+                <div id="forras-allapot" class="forras-allapot">⏳ Események letöltése a felhőből...</div>
                 <div id="motoros-rendezvenyek-tartalom">
                     <p class="ures-allapot">A település 20 km-es körzetében található közelgő motoros találkozók és gurulások itt jelennek meg.</p>
                 </div>

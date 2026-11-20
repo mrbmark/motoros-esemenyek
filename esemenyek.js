@@ -1,15 +1,10 @@
+// --- 1. LÉPÉS: A GOOGLE TÁBLÁZATBÓL KÖZZÉTETT CSV LINK (Az űrlap válaszok) ---
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ43JAhbtm-5Ga3P_248iizag7emZJOeeREPYFgPyI1F7GK0_xAeOjJoHkSyt2Xd9IEq6g1FpA4PlTW/pub?gid=1851516518&single=true&output=csv";
+
 let osszesRendezveny = [];
 let kozelgoEsemenyekLista = [];
 let elmultEsemenyekLista = [];
 let elmultSzuroMod = "osszes";
-
-// Tartalék CSV tartalom, ha helyi file:// megnyitásnál a böngésző blokkolja a fetch() hívást
-const TARTALEK_CSV_SZOVEG = [
-    "Esemény neve,Dátum,Időpont,Helyszín",
-    "Saját Tavaszi Nyitógurulás,2027. április 20.,09:00,Dobogókő",
-    "Nyári Motoros Kemping,2027. július 15-18.,10:00,Alsóörs",
-    "Őszi Szezonzáró Túra,2027. október 10.,09:30,Mátrafüred"
-].join("\n");
 
 const honapKulcsok = [
     ["január", "jan."], ["február", "febr.", "feb."], ["március", "márc."],
@@ -18,13 +13,8 @@ const honapKulcsok = [
     ["október", "okt."], ["november", "nov."], ["december", "dec."]
 ];
 
-function getForrasOsztaly() {
-    return " sa";
-}
-
-function getForrasSzin() {
-    return "#fbbf24";
-}
+function getForrasOsztaly() { return " sa"; }
+function getForrasSzin() { return "#fbbf24"; }
 
 function elemzesEsemenyDatum(datumStr) {
     if (!datumStr) return null;
@@ -180,7 +170,7 @@ function renderElmultRendezvenyek() {
                 <div class="rendezveny-meta">
                     <span>📅 <b>${rend.datum}</b> (lezajlott)</span>
                     <span>📍 ${rend.hely}${tavSzoveg}</span>
-                    <span class="elo-jelveny sa">📋 sajat_esemenyek.csv</span>
+                    <span class="elo-jelveny sa">👥 Közösségi naptár</span>
                 </div>
             </li>
         `;
@@ -241,7 +231,7 @@ function frissitMotorosRendezvenyek(cel) {
     }
 
     if (aktualisRendezvenyek.length === 0) {
-        document.getElementById("motoros-rendezvenyek-tartalom").innerHTML = `<p class="ures-allapot">Jelenleg nincs közelgő motoros találkozó a <b>sajat_esemenyek.csv</b> fájlban.</p>`;
+        document.getElementById("motoros-rendezvenyek-tartalom").innerHTML = `<p class="ures-allapot">Jelenleg nincs közelgő motoros találkozó a naptárban. Kattints a <b>➕ Beküldés</b> gombra, ha tudsz egyről!</p>`;
         return;
     }
 
@@ -253,7 +243,7 @@ function frissitMotorosRendezvenyek(cel) {
                 <div class="rendezveny-meta">
                     <span>📅 <b>${rend.datum}</b></span>
                     <span>📍 ${rend.hely} (${rend.tavKm === 0 ? "helyben" : rend.tavKm + " km"})</span>
-                    <span class="elo-jelveny sa">📋 sajat_esemenyek.csv</span>
+                    <span class="elo-jelveny sa">👥 Közösségi naptár</span>
                 </div>
             </li>
         `;
@@ -296,11 +286,16 @@ function feldolgozCsvSzoveget(csvSzoveg) {
 
         for (let i = 1; i < sorok.length; i++) {
             const mezok = parseCsvSor(sorok[i], elvalaszto);
-            if (mezok.length >= 4 && mezok[0]) {
-                const nev = mezok[0];
-                const datum = mezok[1];
-                const idopont = mezok[2];
-                const hely = mezok[3];
+            
+            // A Google Űrlap automatikusan betesz egy "Időbélyeg" oszlopot előre (0. index).
+            // Ezt figyelembe vesszük egy +1 eltolással, ha létezik (mezok hossza alapján).
+            const eltolas = mezok.length >= 5 ? 1 : 0;
+
+            if (mezok.length >= 4 + eltolas && mezok[0 + eltolas]) {
+                const nev = (mezok[0 + eltolas] || "").replace(/^["']|["']$/g, '');
+                const datum = (mezok[1 + eltolas] || "").replace(/^["']|["']$/g, '');
+                const idopont = (mezok[2 + eltolas] || "").replace(/^["']|["']$/g, '');
+                const hely = (mezok[3 + eltolas] || "").replace(/^["']|["']$/g, '');
 
                 const teljesDatum = idopont ? `${datum} (${idopont})` : datum;
                 const varosTalalat = typeof keresHelyszintSzovegben === "function"
@@ -333,26 +328,7 @@ function feldolgozCsvSzoveget(csvSzoveg) {
     return csvEsemenyek.length;
 }
 
-// Kézi fájltallózás (ha helyi gépen file:// módban nyitod meg az oldalt)
-function betoltHelyiCsvFajl(event) {
-    const fajl = event.target.files && event.target.files[0];
-    if (!fajl) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const db = feldolgozCsvSzoveget(e.target.result);
-        const ido = new Date().toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" });
-        const allapotDoboz = document.getElementById("forras-allapot");
-        if (allapotDoboz) {
-            allapotDoboz.classList.add("sikeres");
-            allapotDoboz.innerHTML = `🟢 Betöltve (${ido}): <b>${fajl.name}</b> (${db} esemény)`;
-        }
-    };
-    reader.readAsText(fajl, "UTF-8");
-    event.target.value = "";
-}
-
-// Automatikus CSV betöltés (webszerveren / GitHub Pages-en)
+// Automatikus Google Táblázat CSV betöltés
 async function frissitOsszesRendezveny() {
     const allapotDoboz = document.getElementById("forras-allapot");
     const frissitGomb = document.getElementById("btn-frissit-rendezvenyek");
@@ -360,12 +336,19 @@ async function frissitOsszesRendezveny() {
     if (frissitGomb) frissitGomb.disabled = true;
     if (allapotDoboz) {
         allapotDoboz.classList.remove("sikeres");
-        allapotDoboz.innerText = "⏳ Események betöltése a sajat_esemenyek.csv fájlból...";
+        allapotDoboz.innerText = "⏳ Események letöltése a Google felhőből...";
     }
 
     try {
-        const response = await fetch("sajat_esemenyek.csv", { cache: "no-store" });
-        if (!response.ok) throw new Error("Nem elérhető a sajat_esemenyek.csv");
+        if (!GOOGLE_SHEET_CSV_URL || GOOGLE_SHEET_CSV_URL.includes("IDE_MASOLD")) {
+            throw new Error("Nincs megadva a Google Sheets CSV link.");
+        }
+
+        // Random paraméter a gyorsítótár elkerülésére, hogy mindig a legfrissebb választ kapjuk
+        const url = GOOGLE_SHEET_CSV_URL + (GOOGLE_SHEET_CSV_URL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+        
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) throw new Error("Nem elérhető a Google Táblázat.");
 
         const csvSzoveg = await response.text();
         const db = feldolgozCsvSzoveget(csvSzoveg);
@@ -373,14 +356,11 @@ async function frissitOsszesRendezveny() {
         const ido = new Date().toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit" });
         if (allapotDoboz) {
             allapotDoboz.classList.add("sikeres");
-            allapotDoboz.innerHTML = `🟢 Betöltve (${ido}): <b>sajat_esemenyek.csv</b> (${db} esemény)`;
+            allapotDoboz.innerHTML = `🟢 Naptár szinkronizálva (${ido}): <b>${db} esemény</b>`;
         }
     } catch (err) {
-        // Helyi file:// megnyitásnál a beépített mintalistát tölti be, és felkínálja a Tallózás gombot
-        const db = feldolgozCsvSzoveget(TARTALEK_CSV_SZOVEG);
         if (allapotDoboz) {
-            allapotDoboz.classList.add("sikeres");
-            allapotDoboz.innerHTML = `🟡 Helyi mód (${db} alap esemény). Saját módosított CSV betöltéséhez használd a fenti <b>📂 Tallózás</b> gombot!`;
+            allapotDoboz.innerHTML = `⚠️ Hiba a letöltésnél. Ellenőrizd a CSV linket az <b>esemenyek.js</b> fájl tetején!`;
         }
     } finally {
         if (frissitGomb) frissitGomb.disabled = false;
