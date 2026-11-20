@@ -277,43 +277,9 @@ function parseCsvSor(sor, elvalaszto) {
     return eredmeny;
 }
 
-// Pontosabb címek/kistelepülések koordinátáinak finomítása a háttérben
-async function finomitHelyszinKoordinatakat(esemenyObj) {
-    if (!esemenyObj || !esemenyObj.nyersHely) return;
-    const kulcs = "geo_cache_" + ekezetNelkul(esemenyObj.nyersHely);
-
-    try {
-        const mentett = localStorage.getItem(kulcs);
-        if (mentett) {
-            const p = JSON.parse(mentett);
-            esemenyObj.lat = p.lat;
-            esemenyObj.lng = p.lng;
-            frissitRendezettEsemenyeket();
-            if (typeof aktualisCel !== "undefined" && aktualisCel) {
-                frissitMotorosRendezvenyek(aktualisCel);
-            }
-            return;
-        }
-
-        const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=hu&limit=1&q=${encodeURIComponent(esemenyObj.nyersHely)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-            esemenyObj.lat = parseFloat(data[0].lat);
-            esemenyObj.lng = parseFloat(data[0].lon);
-            localStorage.setItem(kulcs, JSON.stringify({ lat: esemenyObj.lat, lng: esemenyObj.lng }));
-            frissitRendezettEsemenyeket();
-            if (typeof aktualisCel !== "undefined" && aktualisCel) {
-                frissitMotorosRendezvenyek(aktualisCel);
-            }
-        }
-    } catch (e) {}
-}
-
 function feldolgozCsvSzoveget(csvSzoveg) {
     const sorok = (csvSzoveg || "").replace(/^\uFEFF/, "").split(/\r?\n/).filter(s => s.trim().length > 0);
     const csvEsemenyek = [];
-    const finomitandoLista = [];
 
     if (sorok.length > 1) {
         const elvalaszto = sorok[0].includes(";") ? ";" : ",";
@@ -325,42 +291,36 @@ function feldolgozCsvSzoveget(csvSzoveg) {
             const eltolas = (fejlecVanIdobelyeg || mezok.length >= 5) ? 1 : 0;
 
             if (mezok.length >= 4 + eltolas && mezok[0 + eltolas]) {
-                const nev = (mezok[0 + eltolas] || "").replace(/^["']|["']$/g, "").trim();
-                const datum = (mezok[1 + eltolas] || "").replace(/^["']|["']$/g, "").trim();
-                const idopont = (mezok[2 + eltolas] || "").replace(/^["']|["']$/g, "").trim();
-                const nyersHely = (mezok[3 + eltolas] || "").replace(/^["']|["']$/g, "").trim();
+                const nev = (mezok[0 + eltolas] || "").replace(/^["']|["']$/g, "");
+                const datum = (mezok[1 + eltolas] || "").replace(/^["']|["']$/g, "");
+                const idopont = (mezok[2 + eltolas] || "").replace(/^["']|["']$/g, "");
+                const hely = (mezok[3 + eltolas] || "").replace(/^["']|["']$/g, "");
 
                 const teljesDatum = idopont ? `${datum} (${idopont})` : datum;
                 const varosTalalat = typeof keresHelyszintSzovegben === "function"
-                    ? (keresHelyszintSzovegben(nyersHely) || keresHelyszintSzovegben(nev))
+                    ? (keresHelyszintSzovegben(hely) || keresHelyszintSzovegben(nev))
                     : null;
 
-                // Ha csak a település neve van megadva, kiegészítjük a vármegyével;
-                // ha pontosabb helyszín/cím is szerepel, a teljes beírt helyszínt megtartjuk!
-                const csakVarosNev = varosTalalat && ekezetNelkul(nyersHely) === ekezetNelkul(varosTalalat.nev);
-                const megjelenitettHely = csakVarosNev
-                    ? `${varosTalalat.nev} (${varosTalalat.rovidMegye})`
-                    : (nyersHely || (varosTalalat ? `${varosTalalat.nev} (${varosTalalat.rovidMegye})` : "Ismeretlen helyszín"));
+                // Megőrizzük a teljes beírt helyszínt (pl. "Győr, Land-Plan Hotel & Restaurant"),
+                // ha csak a város neve szerepel, akkor kiegészítjük a vármegyével.
+                let megjelenitettHely = hely;
+                if (!megjelenitettHely && varosTalalat) {
+                    megjelenitettHely = `${varosTalalat.nev} (${varosTalalat.rovidMegye})`;
+                } else if (varosTalalat && typeof ekezetNelkul === "function" && ekezetNelkul(megjelenitettHely) === ekezetNelkul(varosTalalat.nev)) {
+                    megjelenitettHely = `${varosTalalat.nev} (${varosTalalat.rovidMegye})`;
+                }
 
-                const ujEsemeny = {
+                csvEsemenyek.push({
                     nev: nev,
                     datum: teljesDatum,
                     hely: megjelenitettHely,
-                    nyersHely: nyersHely,
-                    varosNev: varosTalalat ? varosTalalat.nev : "",
+                    varosNev: varosTalalat ? varosTalalat.nev : "Budapest",
                     lat: varosTalalat ? varosTalalat.lat : 47.4979,
                     lng: varosTalalat ? varosTalalat.lng : 19.0402,
                     forras: "saját",
                     url: "",
                     korabbi: false
-                };
-
-                csvEsemenyek.push(ujEsemeny);
-
-                // Ha részletes cím van megadva vagy nem szerepelt a 367-es listában, finomítjuk a koordinátát
-                if (nyersHely && (!varosTalalat || !csakVarosNev)) {
-                    finomitandoLista.push(ujEsemeny);
-                }
+                });
             }
         }
     }
@@ -372,11 +332,6 @@ function feldolgozCsvSzoveget(csvSzoveg) {
         if (typeof frissitMotorosRendezvenyek === "function") frissitMotorosRendezvenyek(aktualisCel);
         if (typeof renderElmultRendezvenyek === "function") renderElmultRendezvenyek();
     }
-
-    // Háttérben pontosítjuk a részletes címek koordinátáit (udvarias késleltetéssel)
-    finomitandoLista.forEach((ev, idx) => {
-        setTimeout(() => finomitHelyszinKoordinatakat(ev), idx * 1100);
-    });
 
     return csvEsemenyek.length;
 }
@@ -401,6 +356,7 @@ function ervenyesCsvE(szoveg) {
 async function letoltGoogleCsv() {
     const frissUrl = `${GOOGLE_SHEET_CSV_URL}&t=${Date.now()}`;
 
+    // 1. Közvetlen letöltés
     try {
         const res = await fetchIdokorlattal(GOOGLE_SHEET_CSV_URL, 7000);
         if (res.ok) {
@@ -409,6 +365,7 @@ async function letoltGoogleCsv() {
         }
     } catch (e) {}
 
+    // 2. Tartalék útvonalak (ha egy böngésző adatvédelmi módja blokkolja a Google átirányítását)
     const proxyUrlLista = [
         `https://corsproxy.io/?url=${encodeURIComponent(frissUrl)}`,
         `https://api.allorigins.win/raw?url=${encodeURIComponent(frissUrl)}`,
@@ -425,9 +382,10 @@ async function letoltGoogleCsv() {
         } catch (e) {}
     }
 
-    throw new Error("A Google Táblázat nem érhető el.");
+    throw new Error("A Google Táblázat nem érhető el (ellenőrizd a nyilvános közzétételt).");
 }
 
+// Automatikus Google Táblázat CSV betöltés
 async function frissitOsszesRendezveny() {
     const allapotDoboz = document.getElementById("forras-allapot");
     const frissitGomb = document.getElementById("btn-frissit-rendezvenyek");
