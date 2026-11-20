@@ -23,8 +23,18 @@ try { utolsoUtvonalAdatok; } catch (e) { window.utolsoUtvonalAdatok = { auto: nu
 // --- SEGÉDFÜGGVÉNYEK ---
 
 function getVarosokLista() {
-    if (typeof varosok !== "undefined" && Array.isArray(varosok)) return varosok;
-    if (typeof window !== "undefined" && Array.isArray(window.varosok)) return window.varosok;
+    if (typeof varosok !== "undefined" && Array.isArray(varosok) && varosok.length > 0) return varosok;
+    if (typeof window !== "undefined" && Array.isArray(window.varosok) && window.varosok.length > 0) return window.varosok;
+    // Tartalék keresés, ha a varosok.js más néven mentette a tömböt
+    if (typeof window !== "undefined") {
+        for (const kulcs of Object.keys(window)) {
+            const val = window[kulcs];
+            if (Array.isArray(val) && val.length > 50 && val[0] && typeof val[0].nev === "string" && typeof val[0].lat === "number") {
+                window.varosok = val;
+                return val;
+            }
+        }
+    }
     return [];
 }
 
@@ -63,7 +73,6 @@ function keresHelyszintSzovegben(szoveg) {
     const normSzoveg = ekezetNelkul(szoveg);
     if (!normSzoveg) return null;
 
-    // Először megnézzük a vessző vagy zárójel előtti első részt (pl. "Győr, Land-Plan Hotel" -> "Győr")
     const elsoResz = ekezetNelkul(szoveg.split(",")[0].split("(")[0]);
     if (elsoResz) {
         const pontosElso = lista.find(v => ekezetNelkul(v.nev) === elsoResz);
@@ -99,7 +108,11 @@ function escapeHtml(str) {
 function mutatLegordulo(listaElem) {
     if (!listaElem) return;
     listaElem.classList.add("nyitva", "aktiv");
-    listaElem.style.display = "block";
+    listaElem.style.setProperty("display", "block", "important");
+    listaElem.style.setProperty("visibility", "visible", "important");
+    listaElem.style.setProperty("opacity", "1", "important");
+    listaElem.style.setProperty("pointer-events", "auto", "important");
+    listaElem.style.setProperty("z-index", "9999", "important");
 }
 
 function elrejtLegordulo(listaElem) {

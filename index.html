@@ -52,6 +52,7 @@
                     </div>
                     <div class="combobox-doboz">
                         <input type="text" id="indulas-input" name="motoros_indulas_kereso" class="combobox-input indulas-input" value="Dunakeszi" placeholder="Válassz vagy írj be kiindulópontot..." autocomplete="one-time-code" data-lpignore="true" data-form-type="other"
+                            onclick="nyitLista('indulas', true)"
                             onfocus="nyitLista('indulas', true)"
                             oninput="szurLista('indulas', this.value)"
                             onkeydown="if(event.key==='Enter') keresEgyebTelepulest('indulas')">
@@ -83,6 +84,7 @@
                     </div>
                     <div class="combobox-doboz">
                         <input type="text" id="cel-input" name="motoros_cel_kereso" class="combobox-input" placeholder="Válassz úti célt (kattints ide vagy írj be egy várost, pl. Alsóörs)..." autocomplete="one-time-code" data-lpignore="true" data-form-type="other"
+                            onclick="nyitLista('cel', true)"
                             onfocus="nyitLista('cel', true)"
                             oninput="szurLista('cel', this.value)"
                             onkeydown="if(event.key==='Enter') keresEgyebTelepulest('cel')">
@@ -107,6 +109,7 @@
                     </div>
                     <div class="combobox-doboz">
                         <input type="text" id="esemeny-input" name="motoros_esemeny_kereso" class="combobox-input esemeny-input" placeholder="Válassz közelgő motoros találkozót vagy túrát dátum szerint..." autocomplete="one-time-code" data-lpignore="true" data-form-type="other"
+                            onclick="nyitLista('esemeny', true)"
                             onfocus="nyitLista('esemeny', true)"
                             oninput="szurLista('esemeny', this.value)">
                         <div class="combobox-gombok">
