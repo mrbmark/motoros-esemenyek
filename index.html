@@ -194,6 +194,13 @@
 
     </div>
 
+    
+    <footer style="max-width: 1520px; margin: 22px auto 0 auto; text-align: center; font-size: 13px; color: #9ca3af;">
+        <span id="latogato-doboz" style="display: inline-flex; align-items: center; gap: 6px; background: #171920; border: 1px solid #2b2f3c; padding: 7px 16px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
+            👁️ Látogatók száma: <b id="latogato-szamlalo" style="color: #ffb36b;">betöltés...</b>
+        </span>
+    </footer>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
     
@@ -202,6 +209,33 @@
     <script src="esemenyek.js"></script>
     <script src="terkep.js"></script>
     <script src="app.js"></script>
+
+
+    <script>
+        (async function frissitLatogatoSzamlalot() {
+            const szamlaloElem = document.getElementById("latogato-szamlalo");
+            const dobozElem = document.getElementById("latogato-doboz");
+            const alapUrl = "https://api.counterapi.dev/v1/motoros-esemenyek-hu/latogatok";
+
+            try {
+                // Ha ebben a munkamenetben még nem számoltuk, növeljük 1-gyel (/up), különben csak lekérdezzük
+                const marSzamolva = sessionStorage.getItem("motoros_latogatas_szamolva");
+                const vegpont = marSzamolva ? alapUrl : `${alapUrl}/up`;
+
+                const valasz = await fetch(vegpont);
+                if (!valasz.ok) throw new Error("Számláló nem elérhető");
+
+                const adat = await valasz.json();
+                if (typeof adat.count === "number") {
+                    szamlaloElem.innerText = adat.count.toLocaleString("hu-HU");
+                    sessionStorage.setItem("motoros_latogatas_szamolva", "1");
+                }
+            } catch (e) {
+                // Ha egy reklámblokkoló tiltja a külső kérést, elrejtjük a dobozt
+                if (dobozElem) dobozElem.style.display = "none";
+            }
+        })();
+    </script>
 
 </body>
 </html>
