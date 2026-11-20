@@ -2,22 +2,23 @@
 // MOTOROS ESEMÉNYEK – FŐ ALKALMAZÁSLOGIKA (app.js)
 // ============================================================================
 
-var aktualisIndulas = null;
-var aktualisCel = null;
-var aktualisRendezvenyek = [];
-var kiemeltTalalkozoCel = null;
-var aktualisUtMod = "auto";
+// Biztonságos globális állapot-inicializálás (nem ütközik a terkep.js let változóival)
+try { aktualisIndulas; } catch (e) { window.aktualisIndulas = null; }
+try { aktualisCel; } catch (e) { window.aktualisCel = null; }
+try { aktualisRendezvenyek; } catch (e) { window.aktualisRendezvenyek = []; }
+try { kiemeltTalalkozoCel; } catch (e) { window.kiemeltTalalkozoCel = null; }
+try { aktualisUtMod; } catch (e) { window.aktualisUtMod = "auto"; }
 
-var szurtIndulasLista = [];
-var szurtCelLista = [];
-var szurtEsemenyLista = [];
+try { szurtIndulasLista; } catch (e) { window.szurtIndulasLista = []; }
+try { szurtCelLista; } catch (e) { window.szurtCelLista = []; }
+try { szurtEsemenyLista; } catch (e) { window.szurtEsemenyLista = []; }
 
-var sajatTerkep = null;
-var sajatIndulasMarker = null;
-var sajatCelMarker = null;
-var sajatUtvonalVonal = null;
-var sajatLepesMarker = null;
-var utolsoUtvonalAdatok = { auto: null, sima: null };
+try { sajatTerkep; } catch (e) { window.sajatTerkep = null; }
+try { sajatIndulasMarker; } catch (e) { window.sajatIndulasMarker = null; }
+try { sajatCelMarker; } catch (e) { window.sajatCelMarker = null; }
+try { sajatUtvonalVonal; } catch (e) { window.sajatUtvonalVonal = null; }
+try { sajatLepesMarker; } catch (e) { window.sajatLepesMarker = null; }
+try { utolsoUtvonalAdatok; } catch (e) { window.utolsoUtvonalAdatok = { auto: null, sima: null }; }
 
 // --- SEGÉDFÜGGVÉNYEK ---
 
@@ -62,14 +63,13 @@ function keresHelyszintSzovegben(szoveg) {
         if (pontosElso) return pontosElso;
     }
 
-    // Hosszabb városnevektől haladunk a rövidebbek felé, hogy pl. "Dunakeszi" előbb találjon, mint rövid töredékek
     const rendezettVarosok = [...varosok].sort((a, b) => b.nev.length - a.nev.length);
 
     for (const v of rendezettVarosok) {
         const normVaros = ekezetNelkul(v.nev);
         if (normVaros.length < 2) continue;
         const escaped = normVaros.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const minta = new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9]|ban|ben|on|en|ra|re|ba|be|nal|nel|bol|rol|hoz|hez|val|vel|i\b)`);
+        const minta = new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9]|ban|ben|on|en|ra|re|ba|be|nal|nel|bol|rol|hoz|hez|val|vel|i\\b)`);
         if (minta.test(normSzoveg)) {
             return v;
         }
@@ -201,7 +201,7 @@ function renderVarosLegordulo(tipus, szuro = "") {
 }
 
 function renderEsemenyLegordulo(szuro = "") {
-    const listaElem = document.getElementById(`${tipusPrefix("esemeny")}-lista`);
+    const listaElem = document.getElementById("esemeny-lista");
     const szamlaloElem = document.getElementById("esemeny-szamlalo");
     if (!listaElem) return;
 
@@ -244,8 +244,6 @@ function renderEsemenyLegordulo(szuro = "") {
         `;
     }).join("");
 }
-
-function tipusPrefix(t) { return t; }
 
 // --- PONT VÁLASZTÁSA (INDULÁS, CÉL, ESEMÉNY) ---
 
@@ -413,7 +411,6 @@ async function keresEgyebTelepulest(tipus) {
         return;
     }
 
-    // Először megnézzük, szerepel-e a beépített városlistában
     if (typeof varosok !== "undefined") {
         const pontosIdx = varosok.findIndex(v => ekezetNelkul(v.nev) === ekezetNelkul(kereses));
         if (pontosIdx !== -1) {
@@ -512,7 +509,6 @@ function frissitKivalasztottCelNezet(megtartTalalkozo = false) {
     }
     renderVarosInfo(aktualisCel);
 
-    // Térkép és útvonal frissítése (delegálás terkep.js-nek vagy beépített OSRM útvonaltervezés)
     if (typeof tervezUtvonal === "function") {
         tervezUtvonal(aktualisIndulas, aktualisCel, kiemeltTalalkozoCel);
     } else if (typeof frissitTerkepUtvonal === "function") {
@@ -551,7 +547,7 @@ function renderVarosInfo(cel) {
     kontener.innerHTML = html;
 }
 
-// --- BEÉPÍTETT TÉRKÉP ÉS ÚTVONALTERVEZÉS (HA A terkep.js NEM LÉPETT MŰKÖDÉSBE) ---
+// --- BEÉPÍTETT TÉRKÉP ÉS ÚTVONALTERVEZÉS ---
 
 function inicializalTerkepHaKell() {
     const terkepDiv = document.getElementById("terkep");
