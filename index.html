@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Motoros események – Magyarország</title>
     
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -157,9 +157,13 @@
             <aside class="oldalsav">
                 <div class="oldalsav-fejlec">
                     <h2>🏍️ Motoros találkozók (20 km)</h2>
-                    <button type="button" id="btn-frissit-rendezvenyek" class="frissit-gomb" onclick="frissitOsszesRendezveny(true)" title="Frissítés: autosnaptar.hu, zsakbamacska.eu, programturizmus.hu, csajokamotoron.hu">🔄 Frissítés</button>
+                    <div class="forras-gombok">
+                        <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="betoltHelyiCsvFajl(event)" />
+                        <button type="button" class="frissit-gomb" onclick="document.getElementById('csv-file-input').click()" title="Saját CSV fájl kiválasztása a gépedről">📂 Tallózás</button>
+                        <button type="button" id="btn-frissit-rendezvenyek" class="frissit-gomb" onclick="frissitOsszesRendezveny()" title="sajat_esemenyek.csv újratöltése">🔄</button>
+                    </div>
                 </div>
-                <div id="forras-allapot" class="forras-allapot">⏳ Csatlakozás a motoros eseménynaptárakhoz (4 forrás)...</div>
+                <div id="forras-allapot" class="forras-allapot">⏳ Események betöltése a sajat_esemenyek.csv fájlból...</div>
                 <div id="motoros-rendezvenyek-tartalom">
                     <p class="ures-allapot">A település 20 km-es körzetében található közelgő motoros találkozók és gurulások itt jelennek meg.</p>
                 </div>
@@ -191,8 +195,8 @@
 
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
     
     <!-- Moduláris JavaScript fájlok -->
     <script src="varosok.js"></script>

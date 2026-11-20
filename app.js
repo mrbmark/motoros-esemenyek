@@ -1,5 +1,8 @@
 if (typeof osszesVarosNyers === "undefined") {
-    document.getElementById("megye").innerHTML = `<span style="color:#fca5a5;">⚠️ Hiányzik a <b>varosok.js</b> fájl! Helyezd ugyanabba a mappába az <b>index.html</b> mellé.</span>`;
+    const megyeElem = document.getElementById("megye");
+    if (megyeElem) {
+        megyeElem.innerHTML = `<span style="color:#fca5a5;">⚠️ Hiányzik a <b>varosok.js</b> fájl! Helyezd ugyanabba a mappába az <b>index.html</b> mellé.</span>`;
+    }
 }
 
 const hivatalosVarosObjektumok = (typeof osszesVarosNyers !== "undefined" ? osszesVarosNyers : []).map(item => {
@@ -19,10 +22,12 @@ const hivatalosVarosObjektumok = (typeof osszesVarosNyers !== "undefined" ? ossz
 });
 
 const varosok = [...hivatalosVarosObjektumok, ...(typeof extraMotorosHelyek !== "undefined" ? extraMotorosHelyek : [])]
-    .sort((a, b) => a.nev.localeCompare(b.nev, 'hu'));
+    .sort((a, b) => a.nev.localeCompare(b.nev, "hu"));
 
 const dunakesziAlapIdx = varosok.findIndex(v => v.nev === "Dunakeszi");
-let aktualisIndulas = dunakesziAlapIdx !== -1 ? varosok[dunakesziAlapIdx] : (varosok[0] || { nev: "Dunakeszi", megye: "Pest vármegye", lat: 47.6333, lng: 19.1333 });
+let aktualisIndulas = dunakesziAlapIdx !== -1
+    ? varosok[dunakesziAlapIdx]
+    : (varosok[0] || { nev: "Dunakeszi", megye: "Pest vármegye", lat: 47.6333, lng: 19.1333 });
 let aktualisCel = null;
 let kiemeltTalalkozoCel = null;
 
@@ -34,7 +39,9 @@ function tavolsagKm(lat1, lon1, lat2, lon2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
@@ -42,16 +49,16 @@ const varosKeresoMintak = varosok
     .slice()
     .sort((a, b) => b.nev.length - a.nev.length)
     .map(v => {
-        const escaped = v.nev.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escaped = v.nev.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const variansok = [escaped];
-        if (v.nev.endsWith('a')) variansok.push(escaped.slice(0, -1) + 'á');
-        else if (v.nev.endsWith('e')) variansok.push(escaped.slice(0, -1) + 'é');
-        else if (v.nev.endsWith('o')) variansok.push(escaped.slice(0, -1) + 'ó');
-        else if (v.nev.endsWith('ö')) variansok.push(escaped.slice(0, -1) + 'ő');
+        if (v.nev.endsWith("a")) variansok.push(escaped.slice(0, -1) + "á");
+        else if (v.nev.endsWith("e")) variansok.push(escaped.slice(0, -1) + "é");
+        else if (v.nev.endsWith("o")) variansok.push(escaped.slice(0, -1) + "ó");
+        else if (v.nev.endsWith("ö")) variansok.push(escaped.slice(0, -1) + "ő");
 
-        const alap = `(?:${variansok.join('|')})`;
+        const alap = `(?:${variansok.join("|")})`;
         const ragok = `(?:n|on|en|ön|an|ban|ben|ra|re|ba|be|ról|ről|ból|ből|tól|től|nak|nek|nál|nél|hoz|hez|höz|ig|val|vel|kor|i|iak|iek)?`;
-        const flags = v.nev.length <= 4 ? '' : 'i';
+        const flags = v.nev.length <= 4 ? "" : "i";
         const regex = new RegExp(`(?:^|[\\s,.;:!?()„"–-])(${alap}${ragok})(?:$|[\\s,.;:!?()„"–-])`, flags);
         return { varos: v, regex };
     });
@@ -129,7 +136,7 @@ function renderLegordulo(tipus, szuroSzoveg = "") {
         listaElem.innerHTML = talalatok.map(({ v, idx }) => {
             const isSelected = aktivObj && aktivObj.nev === v.nev && aktivObj.lat === v.lat;
             return `
-                <div class="combobox-elem${isSelected ? ' kivalasztva' : ''}" onmousedown="event.preventDefault(); ${fnNev}(${idx})">
+                <div class="combobox-elem${isSelected ? " kivalasztva" : ""}" onmousedown="event.preventDefault(); ${fnNev}(${idx})">
                     <span class="combobox-elem-nev">${v.nev}</span>
                     <span class="combobox-elem-megye">${v.rovidMegye}</span>
                 </div>
@@ -152,8 +159,7 @@ function renderEsemenyLegordulo(szuroSzoveg = "") {
             !keresettNorm ||
             ekezetNelkul(ev.nev).includes(keresettNorm) ||
             ekezetNelkul(ev.datum).includes(keresettNorm) ||
-            ekezetNelkul(ev.hely).includes(keresettNorm) ||
-            ekezetNelkul(ev.forras || "").includes(keresettNorm)
+            ekezetNelkul(ev.hely).includes(keresettNorm)
         );
 
     if (szamlaloElem) {
@@ -168,14 +174,12 @@ function renderEsemenyLegordulo(szuroSzoveg = "") {
     listaElem.innerHTML = talalatok.map(({ ev, idx }) => {
         const isSelected = kiemeltTalalkozoCel && kiemeltTalalkozoCel.nev === ev.nev;
         const helyRovid = (ev.hely || "").split(",")[0];
-        const extraOsztaly = getForrasOsztaly(ev.forras);
-        const forrasPill = ev.forras ? `<span class="dropdown-forras-pill${extraOsztaly}">${ev.forras}</span>` : "";
         return `
-            <div class="combobox-elem${isSelected ? ' kivalasztva' : ''}" onmousedown="event.preventDefault(); valasztEsemenyElem(${idx})">
+            <div class="combobox-elem${isSelected ? " kivalasztva" : ""}" onmousedown="event.preventDefault(); valasztEsemenyElem(${idx})">
                 <div class="combobox-elem-bal">
                     <div class="combobox-elem-datum-sor">
                         <span>📅 ${ev.datum}</span>
-                        ${forrasPill}
+                        <span class="dropdown-forras-pill">saját</span>
                     </div>
                     <span class="combobox-elem-nev">${ev.nev}</span>
                 </div>
@@ -373,15 +377,20 @@ async function keresEgyebTelepulest(tipus = "cel") {
             const megye = addr.county ? `${addr.county}` : "Magyarország (egyéb település)";
 
             const ujTelepules = {
-                nev: nev, tipus: "település", megye: megye,
+                nev: nev,
+                tipus: "település",
+                megye: megye,
                 rovidMegye: addr.county ? addr.county.replace(" vármegye", "") : "település",
-                jaras: "", iranyitoszam: addr.postcode || "",
-                lat: parseFloat(talalat.lat), lng: parseFloat(talalat.lon),
-                terulet: "Nincs adat", lakossag: "Község / település"
+                jaras: "",
+                iranyitoszam: addr.postcode || "",
+                lat: parseFloat(talalat.lat),
+                lng: parseFloat(talalat.lon),
+                terulet: "Nincs adat",
+                lakossag: "Község / település"
             };
 
             varosok.push(ujTelepules);
-            varosok.sort((a, b) => a.nev.localeCompare(b.nev, 'hu'));
+            varosok.sort((a, b) => a.nev.localeCompare(b.nev, "hu"));
             const ujIdx = varosok.findIndex(v => v.nev === ujTelepules.nev && v.lat === ujTelepules.lat);
 
             egyebBtn.style.display = "none";
@@ -408,5 +417,4 @@ document.addEventListener("click", function(e) {
 inicializalTerkep();
 renderLegordulo("indulas", "");
 renderLegordulo("cel", "");
-frissitRendezettEsemenyeket();
-frissitOsszesRendezveny(false);
+frissitOsszesRendezveny();
