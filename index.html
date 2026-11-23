@@ -9,6 +9,334 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏍️</text></svg>">
+    <style>
+        .fejlec-gombok {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .naptar-megnyito-gomb {
+            background: linear-gradient(135deg, #252a38 0%, #171a23 100%);
+            color: #ffb36b;
+            border: 1px solid #ff6b00;
+            padding: 11px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(255, 107, 0, 0.22);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        }
+        .naptar-megnyito-gomb:hover {
+            transform: translateY(-1px);
+            background: linear-gradient(135deg, #ff6b00 0%, #e05300 100%);
+            color: #ffffff;
+            box-shadow: 0 6px 18px rgba(255, 107, 0, 0.4);
+        }
+        .naptar-hatter {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 10, 15, 0.82);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .naptar-hatter.nyitva {
+            display: flex;
+        }
+        .naptar-ablak {
+            background: #171920;
+            border: 1px solid #2e3342;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 1040px;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+            overflow: hidden;
+            color: #f3f4f6;
+        }
+        .naptar-fejlec {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 22px;
+            background: #1d202b;
+            border-bottom: 1px solid #2b2f3c;
+            flex-wrap: wrap;
+        }
+        .naptar-cim-csoport {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .naptar-cim-csoport h2 {
+            margin: 0;
+            font-size: 19px;
+            color: #ffffff;
+        }
+        .naptar-honap-jelveny {
+            background: rgba(255, 107, 0, 0.16);
+            color: #ffb36b;
+            border: 1px solid rgba(255, 107, 0, 0.4);
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .naptar-fejlec-jobb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .naptar-ma-gomb, .naptar-bezar-gomb {
+            border-radius: 10px;
+            padding: 7px 13px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #343949;
+            background: #232734;
+            color: #e5e7eb;
+            transition: all 0.15s ease;
+        }
+        .naptar-ma-gomb:hover {
+            border-color: #ff6b00;
+            color: #ffb36b;
+        }
+        .naptar-bezar-gomb:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: #ffffff;
+        }
+        .naptar-test {
+            display: grid;
+            grid-template-columns: 1.45fr 1fr;
+            gap: 18px;
+            padding: 18px 22px;
+            overflow-y: auto;
+        }
+        @media (max-width: 860px) {
+            .naptar-test {
+                grid-template-columns: 1fr;
+            }
+        }
+        .naptar-navigacio {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            background: #1d202b;
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid #2b2f3c;
+        }
+        .naptar-lapozo-gomb {
+            background: #262b38;
+            color: #f3f4f6;
+            border: 1px solid #353b4d;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .naptar-lapozo-gomb:hover {
+            background: #ff6b00;
+            border-color: #ff6b00;
+            color: #ffffff;
+        }
+        .naptar-aktualis-honap {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            text-transform: capitalize;
+        }
+        .naptar-het-fejlec {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 6px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #9ca3af;
+        }
+        .naptar-het-fejlec span.hetvege {
+            color: #ffb36b;
+        }
+        .naptar-racs {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        .naptar-nap {
+            min-height: 62px;
+            background: #1d202b;
+            border: 1px solid #2b2f3c;
+            border-radius: 10px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.14s ease;
+            text-align: left;
+            color: #e5e7eb;
+            position: relative;
+        }
+        .naptar-nap:hover {
+            border-color: #6b7280;
+            background: #242836;
+        }
+        .naptar-nap.mas-honap {
+            opacity: 0.35;
+            background: #14161c;
+        }
+        .naptar-nap.ma {
+            box-shadow: inset 0 0 0 1px #38bdf8;
+        }
+        .naptar-nap.van-esemeny {
+            background: linear-gradient(180deg, rgba(255, 107, 0, 0.14) 0%, #1d202b 100%);
+            border-color: rgba(255, 107, 0, 0.55);
+        }
+        .naptar-nap.kivalasztva {
+            border-color: #ff6b00 !important;
+            background: rgba(255, 107, 0, 0.24) !important;
+            box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.35);
+        }
+        .naptar-nap-felso {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .naptar-nap-szam {
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .naptar-nap.ma .naptar-nap-szam {
+            color: #38bdf8;
+        }
+        .naptar-esemeny-db {
+            background: #ff6b00;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 999px;
+            line-height: 1.3;
+        }
+        .naptar-nap-elonezet {
+            font-size: 10px;
+            color: #ffd1a6;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            margin-top: 4px;
+        }
+        .naptar-reszletek-panel {
+            background: #1d202b;
+            border: 1px solid #2b2f3c;
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .naptar-reszletek-fejlec {
+            border-bottom: 1px solid #2b2f3c;
+            padding-bottom: 10px;
+        }
+        .naptar-reszletek-fejlec h3 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+            color: #ffb36b;
+        }
+        .naptar-reszletek-fejlec p {
+            margin: 0;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+        .naptar-esemeny-lista {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            max-height: 360px;
+        }
+        .naptar-esemeny-kartya {
+            background: #151821;
+            border: 1px solid #2e3342;
+            border-left: 4px solid #ff6b00;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .naptar-esemeny-kartya.elmult {
+            border-left-color: #6b7280;
+            opacity: 0.85;
+        }
+        .naptar-esemeny-cim {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .naptar-esemeny-meta {
+            font-size: 12px;
+            color: #d1d5db;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .naptar-terkep-gomb {
+            margin-top: 6px;
+            align-self: flex-start;
+            background: #252a38;
+            color: #ffb36b;
+            border: 1px solid #ff6b00;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .naptar-terkep-gomb:hover {
+            background: #ff6b00;
+            color: #ffffff;
+        }
+        .naptar-ugras-gomb {
+            background: rgba(255, 107, 0, 0.15);
+            color: #ffb36b;
+            border: 1px solid rgba(255, 107, 0, 0.45);
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+        .naptar-ugras-gomb:hover {
+            background: #ff6b00;
+            color: #ffffff;
+        }
+    </style>
 </head>
 <body>
 
@@ -20,9 +348,14 @@
                 <p class="fejlec-alcim">Indulás: <b id="fejlec-indulas">Budapest</b> • Magyarország 348 városa, látnivalói és közelgő motoros találkozói</p>
             </div>
         </div>
-        <button type="button" class="legkozelebbi-gomb" onclick="valasztLegkozelebbiTalalkozo()">
-            🔥 A következő motoros program
-        </button>
+        <div class="fejlec-gombok">
+            <button type="button" id="btn-naptar-megnyit" class="naptar-megnyito-gomb" onclick="nyitNaptarNezet()">
+                📅 NAPTÁR
+            </button>
+            <button type="button" class="legkozelebbi-gomb" onclick="valasztLegkozelebbiTalalkozo()">
+                🔥 A következő motoros program
+            </button>
+        </div>
     </header>
 
     <div class="fo-elrendezes">
@@ -201,6 +534,54 @@
             </aside>
         </div>
 
+    </div>
+
+    <!-- Havi lapozható Naptár felugró ablak -->
+    <div id="naptar-modal" class="naptar-hatter" onclick="if(event.target===this) bezarNaptarNezet()">
+        <div class="naptar-ablak" role="dialog" aria-modal="true" aria-labelledby="naptar-ablak-cim">
+            <div class="naptar-fejlec">
+                <div class="naptar-cim-csoport">
+                    <h2 id="naptar-ablak-cim">📅 Motoros eseménynaptár</h2>
+                    <span id="naptar-honap-szamlalo" class="naptar-honap-jelveny">0 esemény ebben a hónapban</span>
+                </div>
+                <div class="naptar-fejlec-jobb">
+                    <button type="button" class="naptar-ma-gomb" onclick="ugrasMaiNapra()">Ma</button>
+                    <button type="button" class="naptar-bezar-gomb" onclick="bezarNaptarNezet()">✕ Bezárás</button>
+                </div>
+            </div>
+
+            <div class="naptar-test">
+                <div>
+                    <div class="naptar-navigacio">
+                        <button type="button" class="naptar-lapozo-gomb" onclick="lapozNaptarHonap(-1)">◀ Előző hónap</button>
+                        <span id="naptar-aktualis-honap" class="naptar-aktualis-honap">2026. november</span>
+                        <button type="button" class="naptar-lapozo-gomb" onclick="lapozNaptarHonap(1)">Következő hónap ▶</button>
+                    </div>
+
+                    <div class="naptar-het-fejlec">
+                        <span>H</span>
+                        <span>K</span>
+                        <span>Sze</span>
+                        <span>Cs</span>
+                        <span>P</span>
+                        <span class="hetvege">Szo</span>
+                        <span class="hetvege">V</span>
+                    </div>
+
+                    <div id="naptar-racs" class="naptar-racs"></div>
+                </div>
+
+                <div class="naptar-reszletek-panel">
+                    <div class="naptar-reszletek-fejlec">
+                        <h3 id="naptar-kivalasztott-nap-cim">Válassz egy napot a naptárban!</h3>
+                        <p id="naptar-kivalasztott-nap-alcim">Kattints bármelyik dátumra az aznapi motoros találkozók és túrák megtekintéséhez.</p>
+                    </div>
+                    <div id="naptar-nap-esemenyek" class="naptar-esemeny-lista">
+                        <p class="ures-allapot">Kattints egy napra a bal oldali naptárban.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
