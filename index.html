@@ -377,6 +377,27 @@
         <!-- KÖZÉP: Kiindulópont + Úti cél + Motoros események választók és Térkép -->
         <main class="kozep-oszlop">
             <div class="utvonal-valaszto-panel">
+                <!-- Közelgő motoros események választó (dátum szerint) -->
+                <div class="valaszto-blokk" id="esemeny-blokk">
+                    <div class="valaszto-cimke esemeny">
+                        <span>🏍️ Közelgő motoros események (dátum szerint)</span>
+                        <span class="talalat-szamlalo" id="esemeny-szamlalo">0 esemény</span>
+                    </div>
+                    <div class="combobox-doboz">
+                        <input type="text" id="esemeny-input" name="motoros_esemeny_kereso" class="combobox-input esemeny-input" placeholder="Válassz közelgő motoros találkozót vagy túrát dátum szerint..." autocomplete="one-time-code" data-lpignore="true" data-form-type="other"
+                            onclick="nyitLista('esemeny', true)"
+                            onfocus="nyitLista('esemeny', true)"
+                            oninput="szurLista('esemeny', this.value)">
+                        <div class="combobox-gombok">
+                            <button type="button" class="combobox-torol" title="Mező törlése" onclick="torolMezo('esemeny')">✕</button>
+                            <button type="button" class="combobox-nyil" title="Eseménylista megnyitása" onclick="valtLista('esemeny')">▼</button>
+                        </div>
+                        <div id="esemeny-lista" class="combobox-lista esemeny-lista"></div>
+                    </div>
+                </div>
+
+                <div class="esemeny-elvalaszto"></div>
+
                 <!-- Kiindulópont választó -->
                 <div class="valaszto-blokk" id="indulas-blokk">
                     <div class="valaszto-cimke indulas">
@@ -435,27 +456,6 @@
                     <button type="button" id="btn-egyeb-telepules" class="egyeb-telepules-gomb" onclick="keresEgyebTelepulest('cel')">
                         📍 Egyéb magyar település keresése a térképen
                     </button>
-                </div>
-
-                <div class="esemeny-elvalaszto"></div>
-
-                <!-- Közelgő motoros események választó (dátum szerint) -->
-                <div class="valaszto-blokk" id="esemeny-blokk">
-                    <div class="valaszto-cimke esemeny">
-                        <span>🏍️ Közelgő motoros események (dátum szerint)</span>
-                        <span class="talalat-szamlalo" id="esemeny-szamlalo">0 esemény</span>
-                    </div>
-                    <div class="combobox-doboz">
-                        <input type="text" id="esemeny-input" name="motoros_esemeny_kereso" class="combobox-input esemeny-input" placeholder="Válassz közelgő motoros találkozót vagy túrát dátum szerint..." autocomplete="one-time-code" data-lpignore="true" data-form-type="other"
-                            onclick="nyitLista('esemeny', true)"
-                            onfocus="nyitLista('esemeny', true)"
-                            oninput="szurLista('esemeny', this.value)">
-                        <div class="combobox-gombok">
-                            <button type="button" class="combobox-torol" title="Mező törlése" onclick="torolMezo('esemeny')">✕</button>
-                            <button type="button" class="combobox-nyil" title="Eseménylista megnyitása" onclick="valtLista('esemeny')">▼</button>
-                        </div>
-                        <div id="esemeny-lista" class="combobox-lista esemeny-lista"></div>
-                    </div>
                 </div>
             </div>
             
